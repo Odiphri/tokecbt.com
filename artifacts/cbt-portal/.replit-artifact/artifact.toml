@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Toke Schools CBT Portal"
+version = "1.0.0"
+id = "artifacts/cbt-portal"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24425
+
+[services.development]
+run = "pnpm --filter @workspace/cbt-portal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cbt-portal", "run", "build" ]
+publicDir = "artifacts/cbt-portal/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24425"
+BASE_PATH = "/"

@@ -1,0 +1,89 @@
+Here's your refined prompt, ready to paste straight into Replit AI:
+
+---
+
+**Project: Toke Schools CBT Portal**
+
+Build a full-stack web-based Computer Based Testing (CBT) app for a school called **Toke Schools**. The app must be fully functional and deployable on Replit.
+
+---
+
+**TECH STACK**
+- Frontend: React + Tailwind CSS
+- Backend: Node.js + Express
+- Database: SQLite (via better-sqlite3, easy for Replit)
+- Auth: JWT tokens + bcrypt password hashing
+
+---
+
+**AUTHENTICATION**
+
+Student login:
+- Username = Registration Number (e.g. 10466)
+- Default password = 12345
+- Force password change on first login (flag `is_default_password` in DB)
+
+Teacher login:
+- Username = Teacher ID (e.g. TCH001)
+- Custom password, bcrypt hashed
+
+Both sessions handled via JWT. Auto-logout after 30 minutes of inactivity. Exam session stays alive until submitted or timer hits zero.
+
+---
+
+**DATABASE TABLES**
+- `students` — reg_number, name, class, password_hash, is_default_password
+- `teachers` — teacher_id, name, subject, password_hash
+- `exams` — id, subject, class, duration_minutes, start_time, end_time, created_by
+- `questions` — id, exam_id, question_text, option_a/b/c/d, correct_option
+- `results` — id, student_reg, exam_id, score, total, submitted_at
+
+---
+
+**STUDENT FEATURES**
+- Dashboard: see available exams for their class
+- Take exam: one question at a time, countdown timer, question navigator dots
+- Auto-submit when timer hits zero
+- View past results with score, percentage, and grade
+- Change password
+
+---
+
+**TEACHER FEATURES**
+- Dashboard: see all exams they created
+- Create exam: set subject, class, duration, start/end date
+- Question bank: add/edit/delete MCQs per exam
+- View results: table of all students who took each exam
+- Export results as CSV
+
+---
+
+**SECURITY RULES**
+- Never store plain-text passwords — always bcrypt
+- Students can only see exams assigned to their class
+- Students cannot retake a submitted exam
+- Teachers can only edit their own exams
+
+---
+
+**UI REQUIREMENTS**
+- Mobile responsive
+- School colors: dark navy + dark green
+- Show school name "TOKE SCHOOLS" on login screen
+- Clean, simple layout — students and teachers should find it easy to use
+
+---
+
+**SEED DATA (for testing)**
+Create a seed script that adds:
+- 2 sample students (reg: 10466, 10201 — default password: 12345)
+- 1 sample teacher (ID: TCH001 — password: teacher123)
+- 1 sample exam with 5 MCQ questions
+
+---
+
+Start by scaffolding the full folder structure, then build backend API routes, then frontend. Add a README with setup instructions.
+
+---
+
+Paste that into Replit AI and it'll know exactly what to build. 🎯
