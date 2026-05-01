@@ -19,7 +19,7 @@ export default function StudentExam() {
       enabled: !!id,
       retry: false,
       refetchOnWindowFocus: false,
-    }
+    } as any
   });
 
   const submitMutation = useSubmitExam();

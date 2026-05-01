@@ -18,6 +18,8 @@ tags:
     description: Teacher operations
   - name: exams
     description: Exam management
+  - name: admin
+    description: Admin management
   - name: questions
     description: Question management
   - name: results
@@ -388,6 +390,201 @@ paths:
               schema:
                 $ref: "#/components/schemas/TeacherDashboard"
 
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin overview stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/students:
+    get:
+      operationId: getAdminStudents
+      tags: [admin]
+      summary: List all students
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentRecord"
+    post:
+      operationId: createAdminStudent
+      tags: [admin]
+      summary: Create a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudentBody"
+      responses:
+        "201":
+          description: Student created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+
+  /admin/students/{regNumber}:
+    get:
+      operationId: getAdminStudent
+      tags: [admin]
+      summary: Get a student by reg number
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+    put:
+      operationId: updateAdminStudent
+      tags: [admin]
+      summary: Update a student
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudentBody"
+      responses:
+        "200":
+          description: Student updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+    delete:
+      operationId: deleteAdminStudent
+      tags: [admin]
+      summary: Delete a student
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/teachers:
+    get:
+      operationId: getAdminTeachers
+      tags: [admin]
+      summary: List all teachers
+      responses:
+        "200":
+          description: List of teachers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeacherRecord"
+    post:
+      operationId: createAdminTeacher
+      tags: [admin]
+      summary: Create a new teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeacherBody"
+      responses:
+        "201":
+          description: Teacher created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherRecord"
+
+  /admin/teachers/{teacherId}:
+    get:
+      operationId: getAdminTeacher
+      tags: [admin]
+      summary: Get a teacher by ID
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Teacher record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherRecord"
+    put:
+      operationId: updateAdminTeacher
+      tags: [admin]
+      summary: Update a teacher
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeacherBody"
+      responses:
+        "200":
+          description: Teacher updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherRecord"
+    delete:
+      operationId: deleteAdminTeacher
+      tags: [admin]
+      summary: Delete a teacher
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Teacher deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -422,7 +619,7 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher]
+          enum: [student, teacher, admin]
       required: [username, password, role]
 
     LoginResponse:
@@ -432,7 +629,7 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher]
+          enum: [student, teacher, admin]
         name:
           type: string
         isDefaultPassword:
@@ -459,13 +656,102 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher]
+          enum: [student, teacher, admin]
         class:
           type: string
           nullable: true
         isDefaultPassword:
           type: boolean
       required: [id, name, role, isDefaultPassword]
+
+    StudentRecord:
+      type: object
+      properties:
+        regNumber:
+          type: string
+        name:
+          type: string
+        class:
+          type: string
+        isDefaultPassword:
+          type: boolean
+      required: [regNumber, name, class, isDefaultPassword]
+
+    TeacherRecord:
+      type: object
+      properties:
+        teacherId:
+          type: string
+        name:
+          type: string
+        subject:
+          type: string
+      required: [teacherId, name, subject]
+
+    CreateStudentBody:
+      type: object
+      properties:
+        regNumber:
+          type: string
+        name:
+          type: string
+        class:
+          type: string
+        password:
+          type: string
+      required: [regNumber, name, class, password]
+
+    UpdateStudentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        class:
+          type: string
+        password:
+          type: string
+          nullable: true
+        resetPassword:
+          type: boolean
+      required: [name, class]
+
+    CreateTeacherBody:
+      type: object
+      properties:
+        teacherId:
+          type: string
+        name:
+          type: string
+        subject:
+          type: string
+        password:
+          type: string
+      required: [teacherId, name, subject, password]
+
+    UpdateTeacherBody:
+      type: object
+      properties:
+        name:
+          type: string
+        subject:
+          type: string
+        password:
+          type: string
+          nullable: true
+      required: [name, subject]
+
+    AdminStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+        totalTeachers:
+          type: integer
+        totalExams:
+          type: integer
+        totalResults:
+          type: integer
+      required: [totalStudents, totalTeachers, totalExams, totalResults]
 
     Exam:
       type: object

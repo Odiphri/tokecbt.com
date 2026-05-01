@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, studentsTable, teachersTable } from "@workspace/db";
+import { db, studentsTable, teachersTable, adminsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { signToken } from "../lib/jwt";
 import { requireAuth } from "../middlewares/auth";
@@ -72,6 +72,34 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       name: teacher.name,
       isDefaultPassword: false,
       id: teacher.teacherId,
+    });
+    return;
+  }
+
+  if (role === "admin") {
+    const [admin] = await db
+      .select()
+      .from(adminsTable)
+      .where(eq(adminsTable.username, username));
+
+    if (!admin) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(password, admin.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    const token = signToken({ id: admin.username, role: "admin", name: admin.name });
+    res.json({
+      token,
+      role: "admin",
+      name: admin.name,
+      isDefaultPassword: false,
+      id: admin.username,
     });
     return;
   }
@@ -158,6 +186,27 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       id: teacher.teacherId,
       name: teacher.name,
       role: "teacher",
+      class: null,
+      isDefaultPassword: false,
+    });
+    return;
+  }
+
+  if (user.role === "admin") {
+    const [admin] = await db
+      .select()
+      .from(adminsTable)
+      .where(eq(adminsTable.username, user.id));
+
+    if (!admin) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({
+      id: admin.username,
+      name: admin.name,
+      role: "admin",
       class: null,
       isDefaultPassword: false,
     });

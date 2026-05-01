@@ -39,7 +39,7 @@ export default function ExamForm() {
   const { data: exam, isLoading: isExamLoading } = useGetTeacherExam(id, {
     query: {
       enabled: isEdit,
-    }
+    } as any
   });
 
   const createMutation = useCreateExam();

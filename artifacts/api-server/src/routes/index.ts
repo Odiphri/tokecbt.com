@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import studentRouter from "./student";
 import teacherRouter from "./teacher";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(studentRouter);
 router.use(teacherRouter);
+router.use(adminRouter);
 
 export default router;

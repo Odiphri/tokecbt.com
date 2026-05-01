@@ -1,6 +1,6 @@
 import { useAuth } from "@/lib/auth";
-import { Redirect, Switch, Route, useLocation } from "wouter";
-import { StudentLayout, TeacherLayout } from "@/components/layout";
+import { Redirect, Route } from "wouter";
+import { StudentLayout, TeacherLayout, AdminLayout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ 
@@ -9,7 +9,7 @@ export function ProtectedRoute({
   path 
 }: { 
   component: any; 
-  role: "student" | "teacher";
+  role: "student" | "teacher" | "admin";
   path: string;
 }) {
   const { user, isLoading } = useAuth();
@@ -27,14 +27,15 @@ export function ProtectedRoute({
   }
 
   if (user.role !== role) {
-    return <Redirect to={user.role === "student" ? "/student/dashboard" : "/teacher/dashboard"} />;
+    const dest = user.role === "student" ? "/student/dashboard" : user.role === "teacher" ? "/teacher/dashboard" : "/admin/dashboard";
+    return <Redirect to={dest} />;
   }
 
-  if (user.isDefaultPassword && path !== "/change-password") {
+  if (user.isDefaultPassword && user.role !== "admin" && path !== "/change-password") {
     return <Redirect to="/change-password" />;
   }
 
-  const Layout = role === "student" ? StudentLayout : TeacherLayout;
+  const Layout = role === "student" ? StudentLayout : role === "teacher" ? TeacherLayout : AdminLayout;
 
   return (
     <Route path={path}>

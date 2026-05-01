@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: me, isLoading: isMeLoading, error } = useGetMe({
     query: {
       retry: false,
-    }
+    } as any
   });
 
   useEffect(() => {
@@ -70,12 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (token: string, userData: UserInfo) => {
     localStorage.setItem("cbt_token", token);
     setUser(userData);
-    if (userData.isDefaultPassword) {
+    if (userData.isDefaultPassword && userData.role !== "admin") {
       setLocation("/change-password");
     } else if (userData.role === "student") {
       setLocation("/student/dashboard");
-    } else {
+    } else if (userData.role === "teacher") {
       setLocation("/teacher/dashboard");
+    } else {
+      setLocation("/admin/dashboard");
     }
   };
 
