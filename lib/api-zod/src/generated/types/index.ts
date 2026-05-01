@@ -6,10 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminStats";
 export * from "./changePasswordBody";
 export * from "./createExamBody";
 export * from "./createQuestionBody";
 export * from "./createQuestionBodyCorrectOption";
+export * from "./createStudentBody";
+export * from "./createTeacherBody";
 export * from "./errorResponse";
 export * from "./exam";
 export * from "./examResult";
@@ -24,9 +27,13 @@ export * from "./question";
 export * from "./questionCorrectOption";
 export * from "./resultWithExam";
 export * from "./resultWithStudent";
+export * from "./studentRecord";
 export * from "./submitExamBody";
 export * from "./submitExamBodyAnswers";
 export * from "./successResponse";
 export * from "./teacherDashboard";
+export * from "./teacherRecord";
+export * from "./updateStudentBody";
+export * from "./updateTeacherBody";
 export * from "./userInfo";
 export * from "./userInfoRole";

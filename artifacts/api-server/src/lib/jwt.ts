@@ -5,7 +5,7 @@ const JWT_EXPIRES_IN = "30m";
 
 export interface JwtPayload {
   id: string;
-  role: "student" | "teacher";
+  role: "student" | "teacher" | "admin";
   name: string;
 }
 

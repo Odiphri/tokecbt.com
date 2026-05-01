@@ -23,6 +23,7 @@ export type LoginBodyRole = (typeof LoginBodyRole)[keyof typeof LoginBodyRole];
 export const LoginBodyRole = {
   student: "student",
   teacher: "teacher",
+  admin: "admin",
 } as const;
 
 export interface LoginBody {
@@ -37,6 +38,7 @@ export type LoginResponseRole =
 export const LoginResponseRole = {
   student: "student",
   teacher: "teacher",
+  admin: "admin",
 } as const;
 
 export interface LoginResponse {
@@ -57,6 +59,7 @@ export type UserInfoRole = (typeof UserInfoRole)[keyof typeof UserInfoRole];
 export const UserInfoRole = {
   student: "student",
   teacher: "teacher",
+  admin: "admin",
 } as const;
 
 export interface UserInfo {
@@ -65,6 +68,53 @@ export interface UserInfo {
   role: UserInfoRole;
   class?: string | null;
   isDefaultPassword: boolean;
+}
+
+export interface StudentRecord {
+  regNumber: string;
+  name: string;
+  class: string;
+  isDefaultPassword: boolean;
+}
+
+export interface TeacherRecord {
+  teacherId: string;
+  name: string;
+  subject: string;
+}
+
+export interface CreateStudentBody {
+  regNumber: string;
+  name: string;
+  class: string;
+  password: string;
+}
+
+export interface UpdateStudentBody {
+  name: string;
+  class: string;
+  password?: string | null;
+  resetPassword?: boolean;
+}
+
+export interface CreateTeacherBody {
+  teacherId: string;
+  name: string;
+  subject: string;
+  password: string;
+}
+
+export interface UpdateTeacherBody {
+  name: string;
+  subject: string;
+  password?: string | null;
+}
+
+export interface AdminStats {
+  totalStudents: number;
+  totalTeachers: number;
+  totalExams: number;
+  totalResults: number;
 }
 
 export interface Exam {

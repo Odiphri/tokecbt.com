@@ -27,7 +27,7 @@ const loginSchema = z.object({
 
 export default function Login() {
   const { user, login } = useAuth();
-  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [role, setRole] = useState<"student" | "teacher" | "admin">("student");
   const loginMutation = useLogin();
   const { toast } = useToast();
 
@@ -40,7 +40,8 @@ export default function Login() {
   });
 
   if (user) {
-    return <Redirect to={user.role === "student" ? "/student/dashboard" : "/teacher/dashboard"} />;
+    const dest = user.role === "student" ? "/student/dashboard" : user.role === "teacher" ? "/teacher/dashboard" : "/admin/dashboard";
+    return <Redirect to={dest} />;
   }
 
   function onSubmit(values: z.infer<typeof loginSchema>) {
@@ -87,10 +88,11 @@ export default function Login() {
             <CardDescription>Enter your credentials to access the portal</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={role} onValueChange={(v) => setRole(v as "student" | "teacher")} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs value={role} onValueChange={(v) => setRole(v as "student" | "teacher" | "admin")} className="w-full mb-6">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="student">Student</TabsTrigger>
                 <TabsTrigger value="teacher">Teacher</TabsTrigger>
+                <TabsTrigger value="admin">Admin</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -101,9 +103,9 @@ export default function Login() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{role === "student" ? "Registration Number" : "Username"}</FormLabel>
+                      <FormLabel>{role === "student" ? "Student ID" : role === "teacher" ? "Teacher ID" : "Username"}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your username" {...field} />
+                        <Input placeholder={role === "student" ? "Enter your student ID" : role === "teacher" ? "Enter your teacher ID" : "Enter admin username"} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

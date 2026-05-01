@@ -20,12 +20,12 @@ export const HealthCheckResponse = zod.object({
 export const LoginBody = zod.object({
   username: zod.string(),
   password: zod.string(),
-  role: zod.enum(["student", "teacher"]),
+  role: zod.enum(["student", "teacher", "admin"]),
 });
 
 export const LoginResponse = zod.object({
   token: zod.string(),
-  role: zod.enum(["student", "teacher"]),
+  role: zod.enum(["student", "teacher", "admin"]),
   name: zod.string(),
   isDefaultPassword: zod.boolean(),
   id: zod.string(),
@@ -50,7 +50,7 @@ export const ChangePasswordResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
-  role: zod.enum(["student", "teacher"]),
+  role: zod.enum(["student", "teacher", "admin"]),
   class: zod.string().nullish(),
   isDefaultPassword: zod.boolean(),
 });
@@ -349,4 +349,146 @@ export const GetTeacherDashboardResponse = zod.object({
       submittedAt: zod.string(),
     }),
   ),
+});
+
+/**
+ * @summary Get admin overview stats
+ */
+export const GetAdminStatsResponse = zod.object({
+  totalStudents: zod.number(),
+  totalTeachers: zod.number(),
+  totalExams: zod.number(),
+  totalResults: zod.number(),
+});
+
+/**
+ * @summary List all students
+ */
+export const GetAdminStudentsResponseItem = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+});
+export const GetAdminStudentsResponse = zod.array(GetAdminStudentsResponseItem);
+
+/**
+ * @summary Create a new student
+ */
+export const CreateAdminStudentBody = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  password: zod.string(),
+});
+
+/**
+ * @summary Get a student by reg number
+ */
+export const GetAdminStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const GetAdminStudentResponse = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+});
+
+/**
+ * @summary Update a student
+ */
+export const UpdateAdminStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const UpdateAdminStudentBody = zod.object({
+  name: zod.string(),
+  class: zod.string(),
+  password: zod.string().nullish(),
+  resetPassword: zod.boolean().optional(),
+});
+
+export const UpdateAdminStudentResponse = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+});
+
+/**
+ * @summary Delete a student
+ */
+export const DeleteAdminStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const DeleteAdminStudentResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary List all teachers
+ */
+export const GetAdminTeachersResponseItem = zod.object({
+  teacherId: zod.string(),
+  name: zod.string(),
+  subject: zod.string(),
+});
+export const GetAdminTeachersResponse = zod.array(GetAdminTeachersResponseItem);
+
+/**
+ * @summary Create a new teacher
+ */
+export const CreateAdminTeacherBody = zod.object({
+  teacherId: zod.string(),
+  name: zod.string(),
+  subject: zod.string(),
+  password: zod.string(),
+});
+
+/**
+ * @summary Get a teacher by ID
+ */
+export const GetAdminTeacherParams = zod.object({
+  teacherId: zod.coerce.string(),
+});
+
+export const GetAdminTeacherResponse = zod.object({
+  teacherId: zod.string(),
+  name: zod.string(),
+  subject: zod.string(),
+});
+
+/**
+ * @summary Update a teacher
+ */
+export const UpdateAdminTeacherParams = zod.object({
+  teacherId: zod.coerce.string(),
+});
+
+export const UpdateAdminTeacherBody = zod.object({
+  name: zod.string(),
+  subject: zod.string(),
+  password: zod.string().nullish(),
+});
+
+export const UpdateAdminTeacherResponse = zod.object({
+  teacherId: zod.string(),
+  name: zod.string(),
+  subject: zod.string(),
+});
+
+/**
+ * @summary Delete a teacher
+ */
+export const DeleteAdminTeacherParams = zod.object({
+  teacherId: zod.coerce.string(),
+});
+
+export const DeleteAdminTeacherResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
 });

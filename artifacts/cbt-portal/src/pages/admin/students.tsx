@@ -1,0 +1,288 @@
+import { useState } from "react";
+import { useGetAdminStudents, useCreateAdminStudent, useUpdateAdminStudent, useDeleteAdminStudent } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Plus, Pencil, Trash2, RotateCcw, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+type StudentForm = { regNumber: string; name: string; class: string; password: string };
+type EditForm = { name: string; class: string; newPassword: string; resetPassword: boolean };
+
+export default function AdminStudents() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: students, isLoading } = useGetAdminStudents();
+  const createMutation = useCreateAdminStudent();
+  const updateMutation = useUpdateAdminStudent();
+  const deleteMutation = useDeleteAdminStudent();
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [editStudent, setEditStudent] = useState<{ regNumber: string; name: string; class: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const [addForm, setAddForm] = useState<StudentForm>({ regNumber: "", name: "", class: "", password: "12345" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", class: "", newPassword: "", resetPassword: false });
+
+  const filtered = (students ?? []).filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.regNumber.toLowerCase().includes(search.toLowerCase()) ||
+    s.class.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function openEdit(student: { regNumber: string; name: string; class: string }) {
+    setEditStudent(student);
+    setEditForm({ name: student.name, class: student.class, newPassword: "", resetPassword: false });
+  }
+
+  function handleAdd() {
+    if (!addForm.regNumber || !addForm.name || !addForm.class || !addForm.password) {
+      toast({ variant: "destructive", title: "All fields are required" });
+      return;
+    }
+    createMutation.mutate({ data: { regNumber: addForm.regNumber, name: addForm.name, class: addForm.class, password: addForm.password } }, {
+      onSuccess: () => {
+        toast({ title: "Student created successfully" });
+        qc.invalidateQueries({ queryKey: ["/api/admin/students"] });
+        setShowAdd(false);
+        setAddForm({ regNumber: "", name: "", class: "", password: "12345" });
+      },
+      onError: (e: any) => toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to create student" }),
+    });
+  }
+
+  function handleUpdate() {
+    if (!editStudent || !editForm.name || !editForm.class) {
+      toast({ variant: "destructive", title: "Name and class are required" });
+      return;
+    }
+    updateMutation.mutate(
+      {
+        regNumber: editStudent.regNumber,
+        data: {
+          name: editForm.name,
+          class: editForm.class,
+          password: editForm.newPassword || undefined,
+          resetPassword: editForm.resetPassword,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Student updated successfully" });
+          qc.invalidateQueries({ queryKey: ["/api/admin/students"] });
+          setEditStudent(null);
+        },
+        onError: (e: any) => toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to update student" }),
+      }
+    );
+  }
+
+  function handleDelete() {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ regNumber: deleteTarget }, {
+      onSuccess: () => {
+        toast({ title: "Student deleted successfully" });
+        qc.invalidateQueries({ queryKey: ["/api/admin/students"] });
+        setDeleteTarget(null);
+      },
+      onError: (e: any) => toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to delete student" }),
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+          <p className="text-muted-foreground">Manage student accounts</p>
+        </div>
+        <Button className="bg-rose-700 hover:bg-rose-800" onClick={() => setShowAdd(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Student
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="Search by name, ID or class..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
+            {search && (
+              <Button variant="ghost" size="sm" onClick={() => setSearch("")}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground ml-auto">{filtered.length} student{filtered.length !== 1 ? "s" : ""}</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-rose-700" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">No students found</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Password Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(student => (
+                  <TableRow key={student.regNumber}>
+                    <TableCell className="font-mono text-sm">{student.regNumber}</TableCell>
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell>{student.class}</TableCell>
+                    <TableCell>
+                      {student.isDefaultPassword ? (
+                        <Badge variant="destructive">Default</Badge>
+                      ) : (
+                        <Badge variant="secondary">Changed</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(student)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-rose-600 hover:text-rose-700" onClick={() => setDeleteTarget(student.regNumber)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Dialog */}
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Student</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Student ID</Label>
+              <Input value={addForm.regNumber} onChange={e => setAddForm(f => ({ ...f, regNumber: e.target.value }))} placeholder="e.g. 10500" />
+            </div>
+            <div>
+              <Label>Full Name</Label>
+              <Input value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. John Doe" />
+            </div>
+            <div>
+              <Label>Class</Label>
+              <Input value={addForm.class} onChange={e => setAddForm(f => ({ ...f, class: e.target.value }))} placeholder="e.g. JSS 1A" />
+            </div>
+            <div>
+              <Label>Initial Password</Label>
+              <Input value={addForm.password} onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))} placeholder="12345" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button className="bg-rose-700 hover:bg-rose-800" onClick={handleAdd} disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Create Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editStudent} onOpenChange={v => { if (!v) setEditStudent(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student — {editStudent?.regNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Full Name</Label>
+              <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Class</Label>
+              <Input value={editForm.class} onChange={e => setEditForm(f => ({ ...f, class: e.target.value }))} />
+            </div>
+            <div>
+              <Label>New Password (leave blank to keep current)</Label>
+              <Input type="password" value={editForm.newPassword} onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="New password" />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="reset-pw"
+                checked={editForm.resetPassword}
+                onChange={e => setEditForm(f => ({ ...f, resetPassword: e.target.checked }))}
+                className="h-4 w-4"
+              />
+              <label htmlFor="reset-pw" className="text-sm cursor-pointer flex items-center gap-1">
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset to default password (12345)
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditStudent(null)}>Cancel</Button>
+            <Button className="bg-rose-700 hover:bg-rose-800" onClick={handleUpdate} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete student <strong>{deleteTarget}</strong> and all their exam results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-rose-700 hover:bg-rose-800" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

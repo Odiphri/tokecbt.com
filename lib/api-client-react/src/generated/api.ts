@@ -17,9 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminStats,
   ChangePasswordBody,
   CreateExamBody,
   CreateQuestionBody,
+  CreateStudentBody,
+  CreateTeacherBody,
   ErrorResponse,
   Exam,
   ExamResult,
@@ -31,9 +34,13 @@ import type {
   Question,
   ResultWithExam,
   ResultWithStudent,
+  StudentRecord,
   SubmitExamBody,
   SuccessResponse,
   TeacherDashboard,
+  TeacherRecord,
+  UpdateStudentBody,
+  UpdateTeacherBody,
   UserInfo,
 } from "./api.schemas";
 
@@ -1611,3 +1618,918 @@ export function useGetTeacherDashboard<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get admin overview stats
+ */
+export const getGetAdminStatsUrl = () => {
+  return `/api/admin/stats`;
+};
+
+export const getAdminStats = async (
+  options?: RequestInit,
+): Promise<AdminStats> => {
+  return customFetch<AdminStats>(getGetAdminStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminStatsQueryKey = () => {
+  return [`/api/admin/stats`] as const;
+};
+
+export const getGetAdminStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminStats>>> = ({
+    signal,
+  }) => getAdminStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminStats>>
+>;
+export type GetAdminStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get admin overview stats
+ */
+
+export function useGetAdminStats<
+  TData = Awaited<ReturnType<typeof getAdminStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all students
+ */
+export const getGetAdminStudentsUrl = () => {
+  return `/api/admin/students`;
+};
+
+export const getAdminStudents = async (
+  options?: RequestInit,
+): Promise<StudentRecord[]> => {
+  return customFetch<StudentRecord[]>(getGetAdminStudentsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminStudentsQueryKey = () => {
+  return [`/api/admin/students`] as const;
+};
+
+export const getGetAdminStudentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminStudents>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStudents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminStudentsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminStudents>>
+  > = ({ signal }) => getAdminStudents({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStudents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminStudentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminStudents>>
+>;
+export type GetAdminStudentsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all students
+ */
+
+export function useGetAdminStudents<
+  TData = Awaited<ReturnType<typeof getAdminStudents>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStudents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminStudentsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new student
+ */
+export const getCreateAdminStudentUrl = () => {
+  return `/api/admin/students`;
+};
+
+export const createAdminStudent = async (
+  createStudentBody: CreateStudentBody,
+  options?: RequestInit,
+): Promise<StudentRecord> => {
+  return customFetch<StudentRecord>(getCreateAdminStudentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createStudentBody),
+  });
+};
+
+export const getCreateAdminStudentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminStudent>>,
+    TError,
+    { data: BodyType<CreateStudentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminStudent>>,
+  TError,
+  { data: BodyType<CreateStudentBody> },
+  TContext
+> => {
+  const mutationKey = ["createAdminStudent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminStudent>>,
+    { data: BodyType<CreateStudentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminStudent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminStudentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminStudent>>
+>;
+export type CreateAdminStudentMutationBody = BodyType<CreateStudentBody>;
+export type CreateAdminStudentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new student
+ */
+export const useCreateAdminStudent = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminStudent>>,
+    TError,
+    { data: BodyType<CreateStudentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminStudent>>,
+  TError,
+  { data: BodyType<CreateStudentBody> },
+  TContext
+> => {
+  return useMutation(getCreateAdminStudentMutationOptions(options));
+};
+
+/**
+ * @summary Get a student by reg number
+ */
+export const getGetAdminStudentUrl = (regNumber: string) => {
+  return `/api/admin/students/${regNumber}`;
+};
+
+export const getAdminStudent = async (
+  regNumber: string,
+  options?: RequestInit,
+): Promise<StudentRecord> => {
+  return customFetch<StudentRecord>(getGetAdminStudentUrl(regNumber), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminStudentQueryKey = (regNumber: string) => {
+  return [`/api/admin/students/${regNumber}`] as const;
+};
+
+export const getGetAdminStudentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminStudent>>,
+  TError = ErrorType<unknown>,
+>(
+  regNumber: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminStudent>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminStudentQueryKey(regNumber);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminStudent>>> = ({
+    signal,
+  }) => getAdminStudent(regNumber, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!regNumber,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminStudent>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminStudentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminStudent>>
+>;
+export type GetAdminStudentQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a student by reg number
+ */
+
+export function useGetAdminStudent<
+  TData = Awaited<ReturnType<typeof getAdminStudent>>,
+  TError = ErrorType<unknown>,
+>(
+  regNumber: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminStudent>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminStudentQueryOptions(regNumber, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a student
+ */
+export const getUpdateAdminStudentUrl = (regNumber: string) => {
+  return `/api/admin/students/${regNumber}`;
+};
+
+export const updateAdminStudent = async (
+  regNumber: string,
+  updateStudentBody: UpdateStudentBody,
+  options?: RequestInit,
+): Promise<StudentRecord> => {
+  return customFetch<StudentRecord>(getUpdateAdminStudentUrl(regNumber), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStudentBody),
+  });
+};
+
+export const getUpdateAdminStudentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminStudent>>,
+    TError,
+    { regNumber: string; data: BodyType<UpdateStudentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminStudent>>,
+  TError,
+  { regNumber: string; data: BodyType<UpdateStudentBody> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminStudent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminStudent>>,
+    { regNumber: string; data: BodyType<UpdateStudentBody> }
+  > = (props) => {
+    const { regNumber, data } = props ?? {};
+
+    return updateAdminStudent(regNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminStudentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminStudent>>
+>;
+export type UpdateAdminStudentMutationBody = BodyType<UpdateStudentBody>;
+export type UpdateAdminStudentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a student
+ */
+export const useUpdateAdminStudent = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminStudent>>,
+    TError,
+    { regNumber: string; data: BodyType<UpdateStudentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminStudent>>,
+  TError,
+  { regNumber: string; data: BodyType<UpdateStudentBody> },
+  TContext
+> => {
+  return useMutation(getUpdateAdminStudentMutationOptions(options));
+};
+
+/**
+ * @summary Delete a student
+ */
+export const getDeleteAdminStudentUrl = (regNumber: string) => {
+  return `/api/admin/students/${regNumber}`;
+};
+
+export const deleteAdminStudent = async (
+  regNumber: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteAdminStudentUrl(regNumber), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAdminStudentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminStudent>>,
+    TError,
+    { regNumber: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminStudent>>,
+  TError,
+  { regNumber: string },
+  TContext
+> => {
+  const mutationKey = ["deleteAdminStudent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminStudent>>,
+    { regNumber: string }
+  > = (props) => {
+    const { regNumber } = props ?? {};
+
+    return deleteAdminStudent(regNumber, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminStudentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminStudent>>
+>;
+
+export type DeleteAdminStudentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a student
+ */
+export const useDeleteAdminStudent = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminStudent>>,
+    TError,
+    { regNumber: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminStudent>>,
+  TError,
+  { regNumber: string },
+  TContext
+> => {
+  return useMutation(getDeleteAdminStudentMutationOptions(options));
+};
+
+/**
+ * @summary List all teachers
+ */
+export const getGetAdminTeachersUrl = () => {
+  return `/api/admin/teachers`;
+};
+
+export const getAdminTeachers = async (
+  options?: RequestInit,
+): Promise<TeacherRecord[]> => {
+  return customFetch<TeacherRecord[]>(getGetAdminTeachersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminTeachersQueryKey = () => {
+  return [`/api/admin/teachers`] as const;
+};
+
+export const getGetAdminTeachersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminTeachers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminTeachers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminTeachersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminTeachers>>
+  > = ({ signal }) => getAdminTeachers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminTeachers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminTeachersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminTeachers>>
+>;
+export type GetAdminTeachersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all teachers
+ */
+
+export function useGetAdminTeachers<
+  TData = Awaited<ReturnType<typeof getAdminTeachers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminTeachers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminTeachersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new teacher
+ */
+export const getCreateAdminTeacherUrl = () => {
+  return `/api/admin/teachers`;
+};
+
+export const createAdminTeacher = async (
+  createTeacherBody: CreateTeacherBody,
+  options?: RequestInit,
+): Promise<TeacherRecord> => {
+  return customFetch<TeacherRecord>(getCreateAdminTeacherUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTeacherBody),
+  });
+};
+
+export const getCreateAdminTeacherMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminTeacher>>,
+    TError,
+    { data: BodyType<CreateTeacherBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminTeacher>>,
+  TError,
+  { data: BodyType<CreateTeacherBody> },
+  TContext
+> => {
+  const mutationKey = ["createAdminTeacher"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminTeacher>>,
+    { data: BodyType<CreateTeacherBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminTeacher(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminTeacherMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminTeacher>>
+>;
+export type CreateAdminTeacherMutationBody = BodyType<CreateTeacherBody>;
+export type CreateAdminTeacherMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new teacher
+ */
+export const useCreateAdminTeacher = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminTeacher>>,
+    TError,
+    { data: BodyType<CreateTeacherBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminTeacher>>,
+  TError,
+  { data: BodyType<CreateTeacherBody> },
+  TContext
+> => {
+  return useMutation(getCreateAdminTeacherMutationOptions(options));
+};
+
+/**
+ * @summary Get a teacher by ID
+ */
+export const getGetAdminTeacherUrl = (teacherId: string) => {
+  return `/api/admin/teachers/${teacherId}`;
+};
+
+export const getAdminTeacher = async (
+  teacherId: string,
+  options?: RequestInit,
+): Promise<TeacherRecord> => {
+  return customFetch<TeacherRecord>(getGetAdminTeacherUrl(teacherId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminTeacherQueryKey = (teacherId: string) => {
+  return [`/api/admin/teachers/${teacherId}`] as const;
+};
+
+export const getGetAdminTeacherQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminTeacher>>,
+  TError = ErrorType<unknown>,
+>(
+  teacherId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminTeacher>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminTeacherQueryKey(teacherId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeacher>>> = ({
+    signal,
+  }) => getAdminTeacher(teacherId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!teacherId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminTeacher>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminTeacherQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminTeacher>>
+>;
+export type GetAdminTeacherQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a teacher by ID
+ */
+
+export function useGetAdminTeacher<
+  TData = Awaited<ReturnType<typeof getAdminTeacher>>,
+  TError = ErrorType<unknown>,
+>(
+  teacherId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminTeacher>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminTeacherQueryOptions(teacherId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a teacher
+ */
+export const getUpdateAdminTeacherUrl = (teacherId: string) => {
+  return `/api/admin/teachers/${teacherId}`;
+};
+
+export const updateAdminTeacher = async (
+  teacherId: string,
+  updateTeacherBody: UpdateTeacherBody,
+  options?: RequestInit,
+): Promise<TeacherRecord> => {
+  return customFetch<TeacherRecord>(getUpdateAdminTeacherUrl(teacherId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateTeacherBody),
+  });
+};
+
+export const getUpdateAdminTeacherMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminTeacher>>,
+    TError,
+    { teacherId: string; data: BodyType<UpdateTeacherBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminTeacher>>,
+  TError,
+  { teacherId: string; data: BodyType<UpdateTeacherBody> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminTeacher"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminTeacher>>,
+    { teacherId: string; data: BodyType<UpdateTeacherBody> }
+  > = (props) => {
+    const { teacherId, data } = props ?? {};
+
+    return updateAdminTeacher(teacherId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminTeacherMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminTeacher>>
+>;
+export type UpdateAdminTeacherMutationBody = BodyType<UpdateTeacherBody>;
+export type UpdateAdminTeacherMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a teacher
+ */
+export const useUpdateAdminTeacher = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminTeacher>>,
+    TError,
+    { teacherId: string; data: BodyType<UpdateTeacherBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminTeacher>>,
+  TError,
+  { teacherId: string; data: BodyType<UpdateTeacherBody> },
+  TContext
+> => {
+  return useMutation(getUpdateAdminTeacherMutationOptions(options));
+};
+
+/**
+ * @summary Delete a teacher
+ */
+export const getDeleteAdminTeacherUrl = (teacherId: string) => {
+  return `/api/admin/teachers/${teacherId}`;
+};
+
+export const deleteAdminTeacher = async (
+  teacherId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteAdminTeacherUrl(teacherId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAdminTeacherMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminTeacher>>,
+    TError,
+    { teacherId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminTeacher>>,
+  TError,
+  { teacherId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteAdminTeacher"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminTeacher>>,
+    { teacherId: string }
+  > = (props) => {
+    const { teacherId } = props ?? {};
+
+    return deleteAdminTeacher(teacherId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminTeacherMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminTeacher>>
+>;
+
+export type DeleteAdminTeacherMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a teacher
+ */
+export const useDeleteAdminTeacher = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminTeacher>>,
+    TError,
+    { teacherId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminTeacher>>,
+  TError,
+  { teacherId: string },
+  TContext
+> => {
+  return useMutation(getDeleteAdminTeacherMutationOptions(options));
+};

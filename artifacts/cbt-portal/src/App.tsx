@@ -17,6 +17,9 @@ import TeacherExams from "@/pages/teacher/exams";
 import ExamForm from "@/pages/teacher/exam-form";
 import ExamDetail from "@/pages/teacher/exam-detail";
 import ExamResults from "@/pages/teacher/exam-results";
+import AdminDashboard from "@/pages/admin/dashboard";
+import AdminStudents from "@/pages/admin/students";
+import AdminTeachers from "@/pages/admin/teachers";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,11 @@ function Router() {
       <ProtectedRoute path="/teacher/exams/:examId" role="teacher" component={ExamDetail} />
       <ProtectedRoute path="/teacher/exams/:examId/edit" role="teacher" component={ExamForm} />
       <ProtectedRoute path="/teacher/exams/:examId/results" role="teacher" component={ExamResults} />
+
+      {/* Admin Routes */}
+      <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />
+      <ProtectedRoute path="/admin/students" role="admin" component={AdminStudents} />
+      <ProtectedRoute path="/admin/teachers" role="admin" component={AdminTeachers} />
 
       <Route component={NotFound} />
     </Switch>

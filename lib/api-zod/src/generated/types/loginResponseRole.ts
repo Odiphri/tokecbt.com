@@ -12,4 +12,5 @@ export type LoginResponseRole =
 export const LoginResponseRole = {
   student: "student",
   teacher: "teacher",
+  admin: "admin",
 } as const;
