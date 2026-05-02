@@ -33,6 +33,7 @@ export const LoginResponse = zod.object({
   permissions: zod
     .object({
       manage_exams: zod.boolean(),
+      view_all_exams: zod.boolean(),
       view_all_results: zod.boolean(),
       manage_students: zod.boolean(),
     })
@@ -65,6 +66,7 @@ export const GetMeResponse = zod.object({
   permissions: zod
     .object({
       manage_exams: zod.boolean(),
+      view_all_exams: zod.boolean(),
       view_all_results: zod.boolean(),
       manage_students: zod.boolean(),
     })
@@ -455,6 +457,7 @@ export const GetAdminStaffResponseItem = zod.object({
   staffRole: zod.string(),
   permissions: zod.object({
     manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
     view_all_results: zod.boolean(),
     manage_students: zod.boolean(),
   }),
@@ -471,6 +474,7 @@ export const CreateAdminStaffBody = zod.object({
   staffRole: zod.string(),
   permissions: zod.object({
     manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
     view_all_results: zod.boolean(),
     manage_students: zod.boolean(),
   }),
@@ -491,6 +495,7 @@ export const GetAdminStaffMemberResponse = zod.object({
   staffRole: zod.string(),
   permissions: zod.object({
     manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
     view_all_results: zod.boolean(),
     manage_students: zod.boolean(),
   }),
@@ -509,6 +514,7 @@ export const UpdateAdminStaffMemberBody = zod.object({
   staffRole: zod.string(),
   permissions: zod.object({
     manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
     view_all_results: zod.boolean(),
     manage_students: zod.boolean(),
   }),
@@ -522,6 +528,7 @@ export const UpdateAdminStaffMemberResponse = zod.object({
   staffRole: zod.string(),
   permissions: zod.object({
     manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
     view_all_results: zod.boolean(),
     manage_students: zod.boolean(),
   }),

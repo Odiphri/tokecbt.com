@@ -8,6 +8,7 @@
 
 export interface StaffPermissions {
   manage_exams: boolean;
+  view_all_exams: boolean;
   view_all_results: boolean;
   manage_students: boolean;
 }

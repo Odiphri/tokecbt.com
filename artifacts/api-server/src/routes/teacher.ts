@@ -21,11 +21,19 @@ const router: IRouter = Router();
 
 router.use("/teacher", requireAuth, requireRole("staff", "admin"));
 
+function canViewAll(user: Express.Request["user"]): boolean {
+  return user?.role === "admin" || !!user?.permissions?.view_all_exams;
+}
+
+function canManageExams(user: Express.Request["user"]): boolean {
+  return user?.role === "admin" || !!user?.permissions?.manage_exams;
+}
+
 router.get("/teacher/dashboard", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
 
-  const teacherExamsQuery = isAdmin
+  const teacherExamsQuery = viewAll
     ? db.select({ id: examsTable.id }).from(examsTable)
     : db.select({ id: examsTable.id }).from(examsTable).where(eq(examsTable.createdBy, user.id));
 
@@ -100,7 +108,7 @@ router.get("/teacher/dashboard", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
 
   const exams = await db
     .select({
@@ -118,7 +126,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
     .leftJoin(resultsTable, eq(resultsTable.examId, examsTable.id))
-    .where(isAdmin ? undefined : eq(examsTable.createdBy, user.id))
+    .where(viewAll ? undefined : eq(examsTable.createdBy, user.id))
     .groupBy(examsTable.id)
     .orderBy(desc(examsTable.createdAt));
 
@@ -132,6 +140,11 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
 
 router.post("/teacher/exams", async (req, res): Promise<void> => {
   const user = req.user!;
+  if (!canManageExams(user)) {
+    res.status(403).json({ error: "You do not have permission to create exams" });
+    return;
+  }
+
   const parsed = CreateExamBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -164,14 +177,14 @@ router.post("/teacher/exams", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = GetTeacherExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -204,10 +217,15 @@ router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = UpdateExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to edit exams" });
     return;
   }
 
@@ -217,7 +235,7 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -262,14 +280,19 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = DeleteExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const condition = isAdmin
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to delete exams" });
+    return;
+  }
+
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -290,14 +313,14 @@ router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams/:examId/questions", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = GetExamQuestionsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -318,10 +341,15 @@ router.get("/teacher/exams/:examId/questions", async (req, res): Promise<void> =
 
 router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = CreateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to add questions" });
     return;
   }
 
@@ -331,7 +359,7 @@ router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> 
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -360,10 +388,15 @@ router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> 
 
 router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = UpdateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to edit questions" });
     return;
   }
 
@@ -373,7 +406,7 @@ router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Pro
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -407,14 +440,19 @@ router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Pro
 
 router.delete("/teacher/exams/:examId/questions/:questionId", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = DeleteQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const condition = isAdmin
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to delete questions" });
+    return;
+  }
+
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
@@ -440,14 +478,14 @@ router.delete("/teacher/exams/:examId/questions/:questionId", async (req, res): 
 
 router.get("/teacher/exams/:examId/results", async (req, res): Promise<void> => {
   const user = req.user!;
-  const isAdmin = user.role === "admin";
+  const viewAll = canViewAll(user);
   const params = GetExamResultsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const condition = isAdmin
+  const condition = viewAll
     ? eq(examsTable.id, params.data.examId)
     : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
 
