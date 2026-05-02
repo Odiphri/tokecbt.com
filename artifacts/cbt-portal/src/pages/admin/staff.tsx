@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,55 +33,60 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type StaffPermissions = {
   manage_exams: boolean;
+  view_all_exams: boolean;
   view_all_results: boolean;
   manage_students: boolean;
 };
 
-const STAFF_ROLES = ["teacher", "hod", "librarian", "custom"] as const;
-type StaffRole = typeof STAFF_ROLES[number];
-
-const ROLE_LABELS: Record<StaffRole, string> = {
-  teacher: "Teacher",
-  hod: "Head of Department (HOD)",
-  librarian: "Librarian",
-  custom: "Custom",
+const ROLE_PRESETS: Record<string, { label: string; permissions: StaffPermissions }> = {
+  teacher: {
+    label: "Teacher",
+    permissions: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false },
+  },
+  hod: {
+    label: "HOD",
+    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true },
+  },
+  librarian: {
+    label: "Librarian",
+    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false },
+  },
 };
 
-const ROLE_BADGE_COLORS: Record<StaffRole, string> = {
-  teacher: "bg-blue-100 text-blue-800",
-  hod: "bg-purple-100 text-purple-800",
-  librarian: "bg-green-100 text-green-800",
-  custom: "bg-gray-100 text-gray-800",
+const EMPTY_PERMISSIONS: StaffPermissions = {
+  manage_exams: false,
+  view_all_exams: false,
+  view_all_results: false,
+  manage_students: false,
 };
 
-const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
-  teacher: { manage_exams: true, view_all_results: false, manage_students: false },
-  hod: { manage_exams: true, view_all_results: true, manage_students: true },
-  librarian: { manage_exams: false, view_all_results: false, manage_students: false },
-  custom: { manage_exams: false, view_all_results: false, manage_students: false },
-};
-
-const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
-  manage_exams: "Manage Exams (create, edit, delete)",
-  view_all_results: "View All Student Results",
-  manage_students: "Manage Student Accounts",
+const PERMISSION_LABELS: Record<keyof StaffPermissions, { label: string; description: string }> = {
+  manage_exams: {
+    label: "Manage Own Exams",
+    description: "Create, edit and delete their own exams and questions",
+  },
+  view_all_exams: {
+    label: "View & Edit All Exams",
+    description: "Access and modify all exams across all staff members",
+  },
+  view_all_results: {
+    label: "View All Results",
+    description: "See student results for any exam school-wide",
+  },
+  manage_students: {
+    label: "Manage Students",
+    description: "Add, edit and delete student accounts",
+  },
 };
 
 type AddForm = {
   staffId: string;
   name: string;
   subject: string;
-  staffRole: StaffRole;
+  staffRole: string;
   permissions: StaffPermissions;
   password: string;
 };
@@ -89,7 +94,7 @@ type AddForm = {
 type EditForm = {
   name: string;
   subject: string;
-  staffRole: StaffRole;
+  staffRole: string;
   permissions: StaffPermissions;
   newPassword: string;
 };
@@ -110,24 +115,64 @@ function PermissionsEditor({
   onChange: (p: StaffPermissions) => void;
 }) {
   return (
-    <div className="space-y-2 border rounded-md p-3 bg-slate-50">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Permissions</p>
+    <div className="space-y-1 border rounded-md p-3 bg-slate-50">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Permissions</p>
       {(Object.keys(PERMISSION_LABELS) as Array<keyof StaffPermissions>).map(key => (
-        <div key={key} className="flex items-center gap-3">
+        <div key={key} className="flex items-start gap-3 py-1.5">
           <Checkbox
             id={key}
             checked={permissions[key]}
             onCheckedChange={(checked) =>
               onChange({ ...permissions, [key]: !!checked })
             }
+            className="mt-0.5"
           />
-          <label htmlFor={key} className="text-sm cursor-pointer select-none">
-            {PERMISSION_LABELS[key]}
-          </label>
+          <div>
+            <label htmlFor={key} className="text-sm font-medium cursor-pointer select-none block">
+              {PERMISSION_LABELS[key].label}
+            </label>
+            <p className="text-xs text-muted-foreground">{PERMISSION_LABELS[key].description}</p>
+          </div>
         </div>
       ))}
     </div>
   );
+}
+
+function RolePresetButtons({ onSelect }: { onSelect: (role: string, permissions: StaffPermissions) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
+        <Zap className="h-3 w-3" /> Quick presets:
+      </span>
+      {Object.entries(ROLE_PRESETS).map(([key, preset]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onSelect(key, preset.permissions)}
+          className="text-xs px-2 py-1 rounded border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+        >
+          {preset.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => onSelect("", EMPTY_PERMISSIONS)}
+        className="text-xs px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+      >
+        Clear / Custom
+      </button>
+    </div>
+  );
+}
+
+function getPermissionBadges(perms: StaffPermissions) {
+  const active: string[] = [];
+  if (perms.manage_exams) active.push("Own Exams");
+  if (perms.view_all_exams) active.push("All Exams");
+  if (perms.view_all_results) active.push("All Results");
+  if (perms.manage_students) active.push("Students");
+  return active;
 }
 
 export default function AdminStaff() {
@@ -148,7 +193,7 @@ export default function AdminStaff() {
     name: "",
     subject: "",
     staffRole: "teacher",
-    permissions: DEFAULT_PERMISSIONS.teacher,
+    permissions: ROLE_PRESETS.teacher.permissions,
     password: "staff123",
   });
 
@@ -156,7 +201,7 @@ export default function AdminStaff() {
     name: "",
     subject: "",
     staffRole: "teacher",
-    permissions: DEFAULT_PERMISSIONS.teacher,
+    permissions: ROLE_PRESETS.teacher.permissions,
     newPassword: "",
   });
 
@@ -167,29 +212,19 @@ export default function AdminStaff() {
     s.staffRole.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleRoleChange(role: StaffRole, form: "add" | "edit") {
-    const perms = DEFAULT_PERMISSIONS[role] ?? DEFAULT_PERMISSIONS.custom;
-    if (form === "add") {
-      setAddForm(f => ({ ...f, staffRole: role, permissions: perms }));
-    } else {
-      setEditForm(f => ({ ...f, staffRole: role, permissions: perms }));
-    }
-  }
-
   function openEdit(s: StaffItem) {
     setEditStaff(s);
-    const role = (STAFF_ROLES.includes(s.staffRole as StaffRole) ? s.staffRole : "custom") as StaffRole;
     setEditForm({
       name: s.name,
       subject: s.subject,
-      staffRole: role,
+      staffRole: s.staffRole,
       permissions: s.permissions,
       newPassword: "",
     });
   }
 
   function handleAdd() {
-    if (!addForm.staffId || !addForm.name || !addForm.subject || !addForm.password) {
+    if (!addForm.staffId || !addForm.name || !addForm.subject || !addForm.password || !addForm.staffRole) {
       toast({ variant: "destructive", title: "All fields are required" });
       return;
     }
@@ -209,7 +244,7 @@ export default function AdminStaff() {
           toast({ title: "Staff member created successfully" });
           qc.invalidateQueries({ queryKey: getGetAdminStaffQueryKey() });
           setShowAdd(false);
-          setAddForm({ staffId: "", name: "", subject: "", staffRole: "teacher", permissions: DEFAULT_PERMISSIONS.teacher, password: "staff123" });
+          setAddForm({ staffId: "", name: "", subject: "", staffRole: "teacher", permissions: ROLE_PRESETS.teacher.permissions, password: "staff123" });
         },
         onError: (e: any) =>
           toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to create staff member" }),
@@ -218,8 +253,8 @@ export default function AdminStaff() {
   }
 
   function handleUpdate() {
-    if (!editStaff || !editForm.name || !editForm.subject) {
-      toast({ variant: "destructive", title: "Name and subject are required" });
+    if (!editStaff || !editForm.name || !editForm.subject || !editForm.staffRole) {
+      toast({ variant: "destructive", title: "Name, subject and role are required" });
       return;
     }
     updateMutation.mutate(
@@ -314,33 +349,26 @@ export default function AdminStaff() {
               </TableHeader>
               <TableBody>
                 {filtered.map(member => {
-                  const role = member.staffRole as StaffRole;
-                  const roleLabel = ROLE_LABELS[role] ?? member.staffRole;
-                  const badgeClass = ROLE_BADGE_COLORS[role] ?? "bg-gray-100 text-gray-800";
-                  const perms = member.permissions ?? {};
+                  const perms = (member.permissions ?? EMPTY_PERMISSIONS) as StaffPermissions;
+                  const badges = getPermissionBadges(perms);
                   return (
                     <TableRow key={member.staffId}>
                       <TableCell className="font-mono text-sm">{member.staffId}</TableCell>
                       <TableCell className="font-medium">{member.name}</TableCell>
                       <TableCell>{member.subject}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
-                          {roleLabel}
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 capitalize">
+                          {member.staffRole}
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
-                          {perms.manage_exams && (
-                            <Badge variant="outline" className="text-xs py-0 h-5">Exams</Badge>
-                          )}
-                          {perms.view_all_results && (
-                            <Badge variant="outline" className="text-xs py-0 h-5">Results</Badge>
-                          )}
-                          {perms.manage_students && (
-                            <Badge variant="outline" className="text-xs py-0 h-5">Students</Badge>
-                          )}
-                          {!perms.manage_exams && !perms.view_all_results && !perms.manage_students && (
-                            <span className="text-xs text-muted-foreground">None</span>
+                          {badges.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">No permissions</span>
+                          ) : (
+                            badges.map(b => (
+                              <Badge key={b} variant="outline" className="text-xs py-0 h-5">{b}</Badge>
+                            ))
                           )}
                         </div>
                       </TableCell>
@@ -368,7 +396,7 @@ export default function AdminStaff() {
 
       {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Staff Member</DialogTitle>
           </DialogHeader>
@@ -407,21 +435,18 @@ export default function AdminStaff() {
                 placeholder="e.g. English Language"
               />
             </div>
-            <div>
-              <Label>Role</Label>
-              <Select
+            <div className="space-y-2">
+              <Label>Role Title</Label>
+              <Input
                 value={addForm.staffRole}
-                onValueChange={(v) => handleRoleChange(v as StaffRole, "add")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STAFF_ROLES.map(r => (
-                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={e => setAddForm(f => ({ ...f, staffRole: e.target.value }))}
+                placeholder="e.g. Teacher, HOD, Librarian, Counselor..."
+              />
+              <RolePresetButtons
+                onSelect={(role, permissions) =>
+                  setAddForm(f => ({ ...f, staffRole: role || f.staffRole, permissions }))
+                }
+              />
             </div>
             <PermissionsEditor
               permissions={addForm.permissions}
@@ -444,7 +469,7 @@ export default function AdminStaff() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editStaff} onOpenChange={v => { if (!v) setEditStaff(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               <span className="flex items-center gap-2">
@@ -468,28 +493,25 @@ export default function AdminStaff() {
                 onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
               />
             </div>
-            <div>
-              <Label>Role</Label>
-              <Select
+            <div className="space-y-2">
+              <Label>Role Title</Label>
+              <Input
                 value={editForm.staffRole}
-                onValueChange={(v) => handleRoleChange(v as StaffRole, "edit")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STAFF_ROLES.map(r => (
-                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={e => setEditForm(f => ({ ...f, staffRole: e.target.value }))}
+                placeholder="e.g. Teacher, HOD, Librarian..."
+              />
+              <RolePresetButtons
+                onSelect={(role, permissions) =>
+                  setEditForm(f => ({ ...f, staffRole: role || f.staffRole, permissions }))
+                }
+              />
             </div>
             <PermissionsEditor
               permissions={editForm.permissions}
               onChange={p => setEditForm(f => ({ ...f, permissions: p }))}
             />
             <div>
-              <Label>New Password (leave blank to keep current)</Label>
+              <Label>New Password <span className="text-muted-foreground font-normal">(leave blank to keep current)</span></Label>
               <Input
                 type="password"
                 value={editForm.newPassword}

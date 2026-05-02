@@ -649,11 +649,13 @@ components:
       properties:
         manage_exams:
           type: boolean
+        view_all_exams:
+          type: boolean
         view_all_results:
           type: boolean
         manage_students:
           type: boolean
-      required: [manage_exams, view_all_results, manage_students]
+      required: [manage_exams, view_all_exams, view_all_results, manage_students]
 
     LoginBody:
       type: object
