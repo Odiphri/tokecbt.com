@@ -3,6 +3,8 @@ import { db, examsTable, questionsTable, resultsTable, studentsTable } from "@wo
 import { eq, and, sql, avg, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
+  CreateAdminStudentBody,
+  UpdateAdminStudentBody,
   CreateExamBody,
   GetTeacherExamParams,
   UpdateExamParams,
@@ -28,6 +30,93 @@ function canViewAll(user: Express.Request["user"]): boolean {
 function canManageExams(user: Express.Request["user"]): boolean {
   return user?.role === "admin" || !!user?.permissions?.manage_exams;
 }
+
+function canManageStudents(user: Express.Request["user"]): boolean {
+  return user?.role === "admin" || !!user?.permissions?.manage_students;
+}
+
+// ─── Student management routes (requires manage_students permission) ──────────
+
+router.get("/teacher/students", async (req, res): Promise<void> => {
+  if (!canManageStudents(req.user)) {
+    res.status(403).json({ error: "manage_students permission required" });
+    return;
+  }
+  const students = await db.select().from(studentsTable);
+  res.json(
+    students.map(s => ({
+      regNumber: s.regNumber,
+      name: s.name,
+      class: s.class,
+      isDefaultPassword: s.isDefaultPassword,
+    }))
+  );
+});
+
+router.post("/teacher/students", async (req, res): Promise<void> => {
+  if (!canManageStudents(req.user)) {
+    res.status(403).json({ error: "manage_students permission required" });
+    return;
+  }
+  const parsed = CreateAdminStudentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const bcrypt = await import("bcryptjs");
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  const [student] = await db.insert(studentsTable).values({
+    regNumber: parsed.data.regNumber,
+    name: parsed.data.name,
+    class: parsed.data.class,
+    passwordHash,
+    isDefaultPassword: true,
+  }).returning();
+  res.status(201).json({
+    regNumber: student.regNumber,
+    name: student.name,
+    class: student.class,
+    isDefaultPassword: student.isDefaultPassword,
+  });
+});
+
+router.put("/teacher/students/:regNumber", async (req, res): Promise<void> => {
+  if (!canManageStudents(req.user)) {
+    res.status(403).json({ error: "manage_students permission required" });
+    return;
+  }
+  const parsed = UpdateAdminStudentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { regNumber } = req.params;
+  const updates: Record<string, unknown> = { name: parsed.data.name, class: parsed.data.class };
+  if (parsed.data.resetPassword) {
+    const bcrypt = await import("bcryptjs");
+    updates.passwordHash = await bcrypt.hash("12345", 10);
+    updates.isDefaultPassword = true;
+  } else if (parsed.data.password) {
+    const bcrypt = await import("bcryptjs");
+    updates.passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    updates.isDefaultPassword = false;
+  }
+  const [student] = await db.update(studentsTable).set(updates).where(eq(studentsTable.regNumber, regNumber)).returning();
+  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+  res.json({ regNumber: student.regNumber, name: student.name, class: student.class, isDefaultPassword: student.isDefaultPassword });
+});
+
+router.delete("/teacher/students/:regNumber", async (req, res): Promise<void> => {
+  if (!canManageStudents(req.user)) {
+    res.status(403).json({ error: "manage_students permission required" });
+    return;
+  }
+  const { regNumber } = req.params;
+  await db.delete(studentsTable).where(eq(studentsTable.regNumber, regNumber));
+  res.json({ success: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.get("/teacher/dashboard", async (req, res): Promise<void> => {
   const user = req.user!;

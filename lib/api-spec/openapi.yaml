@@ -169,6 +169,80 @@ paths:
                 items:
                   $ref: "#/components/schemas/ResultWithExam"
 
+  /teacher/students:
+    get:
+      operationId: getTeacherStudents
+      tags: [staff]
+      summary: List all students (requires manage_students permission)
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentRecord"
+    post:
+      operationId: createTeacherStudent
+      tags: [staff]
+      summary: Create a new student (requires manage_students permission)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudentBody"
+      responses:
+        "201":
+          description: Student created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+
+  /teacher/students/{regNumber}:
+    put:
+      operationId: updateTeacherStudent
+      tags: [staff]
+      summary: Update a student (requires manage_students permission)
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudentBody"
+      responses:
+        "200":
+          description: Student updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+    delete:
+      operationId: deleteTeacherStudent
+      tags: [staff]
+      summary: Delete a student (requires manage_students permission)
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /teacher/exams:
     get:
       operationId: getTeacherExams

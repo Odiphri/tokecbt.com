@@ -28,7 +28,7 @@ A full-stack Computer Based Testing (CBT) web application for Toke Schools. Stud
 ## Database Tables
 
 - `students` — reg_number (PK), name, class, password_hash, is_default_password
-- `teachers` — teacher_id (PK), name, subject, password_hash
+- `teachers` — teacher_id (PK), name, subject, password_hash, staff_role, permissions (JSONB: manage_exams, view_all_exams, view_all_results, manage_students)
 - `exams` — id, subject, class, duration_minutes, start_time, end_time, created_by, created_at
 - `questions` — id, exam_id (FK), question_text, option_a/b/c/d, correct_option
 - `results` — id, student_reg, exam_id (FK), score, total, submitted_at
@@ -38,7 +38,7 @@ A full-stack Computer Based Testing (CBT) web application for Toke Schools. Stud
 
 - Student 1: reg=10466, password=12345 (default, must change on first login)
 - Student 2: reg=10201, password=12345 (default, must change on first login)
-- Teacher: ID=TCH001, password=teacher123
+- Teacher: ID=TCH001, password=12345 (default)
 - Admin: username=admin, password=admin123
 - Sample exam: Mathematics, JSS 3A, 30 minutes, 5 MCQ questions
 
@@ -53,5 +53,9 @@ A full-stack Computer Based Testing (CBT) web application for Toke Schools. Stud
 - Students forced to change default password before accessing dashboard
 - Students only see exams for their class
 - Students cannot retake submitted exams
-- Teachers can only edit their own exams
+- Teachers can only edit their own exams (unless view_all_exams permission is enabled)
+- Staff permissions are per-user flags: manage_exams, view_all_exams, view_all_results, manage_students
+- Staff with manage_students can list/create/update/delete students via /teacher/students routes
+- Staff with view_all_exams see all school exams with "Created By" column
 - Admins (username/password login) can create, edit, delete students and teachers; password reset available for students
+- Admin staff page supports free-form role names with preset buttons (Teacher/HOD/Librarian)
