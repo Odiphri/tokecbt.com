@@ -18,12 +18,17 @@ export interface SuccessResponse {
   message: string;
 }
 
+export interface StaffPermissions {
+  manage_exams: boolean;
+  view_all_results: boolean;
+  manage_students: boolean;
+}
+
 export type LoginBodyRole = (typeof LoginBodyRole)[keyof typeof LoginBodyRole];
 
 export const LoginBodyRole = {
   student: "student",
-  teacher: "teacher",
-  admin: "admin",
+  staff: "staff",
 } as const;
 
 export interface LoginBody {
@@ -37,16 +42,18 @@ export type LoginResponseRole =
 
 export const LoginResponseRole = {
   student: "student",
-  teacher: "teacher",
+  staff: "staff",
   admin: "admin",
 } as const;
 
 export interface LoginResponse {
   token: string;
   role: LoginResponseRole;
-  name: string;
+  name: string | null;
   isDefaultPassword: boolean;
   id: string;
+  staffRole?: string | null;
+  permissions?: StaffPermissions | null;
 }
 
 export interface ChangePasswordBody {
@@ -58,7 +65,7 @@ export type UserInfoRole = (typeof UserInfoRole)[keyof typeof UserInfoRole];
 
 export const UserInfoRole = {
   student: "student",
-  teacher: "teacher",
+  staff: "staff",
   admin: "admin",
 } as const;
 
@@ -68,6 +75,8 @@ export interface UserInfo {
   role: UserInfoRole;
   class?: string | null;
   isDefaultPassword: boolean;
+  staffRole?: string | null;
+  permissions?: StaffPermissions | null;
 }
 
 export interface StudentRecord {
@@ -77,10 +86,12 @@ export interface StudentRecord {
   isDefaultPassword: boolean;
 }
 
-export interface TeacherRecord {
-  teacherId: string;
+export interface StaffRecord {
+  staffId: string;
   name: string;
   subject: string;
+  staffRole: string;
+  permissions: StaffPermissions;
 }
 
 export interface CreateStudentBody {
@@ -97,22 +108,26 @@ export interface UpdateStudentBody {
   resetPassword?: boolean;
 }
 
-export interface CreateTeacherBody {
-  teacherId: string;
+export interface CreateStaffBody {
+  staffId: string;
   name: string;
   subject: string;
+  staffRole: string;
+  permissions: StaffPermissions;
   password: string;
 }
 
-export interface UpdateTeacherBody {
+export interface UpdateStaffBody {
   name: string;
   subject: string;
+  staffRole: string;
+  permissions: StaffPermissions;
   password?: string | null;
 }
 
 export interface AdminStats {
   totalStudents: number;
-  totalTeachers: number;
+  totalStaff: number;
   totalExams: number;
   totalResults: number;
 }

@@ -19,14 +19,17 @@ import {
 
 const router: IRouter = Router();
 
-router.use(requireAuth, requireRole("teacher"));
+router.use("/teacher", requireAuth, requireRole("staff", "admin"));
 
 router.get("/teacher/dashboard", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
 
-  const teacherExamIds = (await db.select({ id: examsTable.id })
-    .from(examsTable)
-    .where(eq(examsTable.createdBy, user.id))).map(e => e.id);
+  const teacherExamsQuery = isAdmin
+    ? db.select({ id: examsTable.id }).from(examsTable)
+    : db.select({ id: examsTable.id }).from(examsTable).where(eq(examsTable.createdBy, user.id));
+
+  const teacherExamIds = (await teacherExamsQuery).map(e => e.id);
 
   const totalExams = teacherExamIds.length;
 
@@ -97,6 +100,7 @@ router.get("/teacher/dashboard", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
 
   const exams = await db
     .select({
@@ -114,7 +118,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
     .leftJoin(resultsTable, eq(resultsTable.examId, examsTable.id))
-    .where(eq(examsTable.createdBy, user.id))
+    .where(isAdmin ? undefined : eq(examsTable.createdBy, user.id))
     .groupBy(examsTable.id)
     .orderBy(desc(examsTable.createdAt));
 
@@ -160,16 +164,21 @@ router.post("/teacher/exams", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = GetTeacherExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
   const [exam] = await db
     .select()
     .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+    .where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });
@@ -195,6 +204,7 @@ router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = UpdateExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -207,10 +217,14 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
     return;
   }
 
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
   const [existing] = await db
     .select()
     .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+    .where(condition);
 
   if (!existing) {
     res.status(404).json({ error: "Exam not found" });
@@ -248,16 +262,21 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = DeleteExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
   const [existing] = await db
     .select()
     .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+    .where(condition);
 
   if (!existing) {
     res.status(404).json({ error: "Exam not found" });
@@ -271,16 +290,18 @@ router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
 
 router.get("/teacher/exams/:examId/questions", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = GetExamQuestionsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [exam] = await db
-    .select()
-    .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });
@@ -297,6 +318,7 @@ router.get("/teacher/exams/:examId/questions", async (req, res): Promise<void> =
 
 router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = CreateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -309,10 +331,11 @@ router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> 
     return;
   }
 
-  const [exam] = await db
-    .select()
-    .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });
@@ -337,6 +360,7 @@ router.post("/teacher/exams/:examId/questions", async (req, res): Promise<void> 
 
 router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = UpdateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -349,10 +373,11 @@ router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Pro
     return;
   }
 
-  const [exam] = await db
-    .select()
-    .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });
@@ -382,16 +407,18 @@ router.put("/teacher/exams/:examId/questions/:questionId", async (req, res): Pro
 
 router.delete("/teacher/exams/:examId/questions/:questionId", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = DeleteQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [exam] = await db
-    .select()
-    .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });
@@ -413,16 +440,18 @@ router.delete("/teacher/exams/:examId/questions/:questionId", async (req, res): 
 
 router.get("/teacher/exams/:examId/results", async (req, res): Promise<void> => {
   const user = req.user!;
+  const isAdmin = user.role === "admin";
   const params = GetExamResultsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [exam] = await db
-    .select()
-    .from(examsTable)
-    .where(and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id)));
+  const condition = isAdmin
+    ? eq(examsTable.id, params.data.examId)
+    : and(eq(examsTable.id, params.data.examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
 
   if (!exam) {
     res.status(404).json({ error: "Exam not found" });

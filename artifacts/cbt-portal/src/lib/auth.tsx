@@ -3,7 +3,6 @@ import { useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
 import type { UserInfo } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
-// Configure token getter for API client
 setAuthTokenGetter(() => {
   return localStorage.getItem("cbt_token");
 });
@@ -23,9 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
 
   const { data: me, isLoading: isMeLoading, error } = useGetMe({
-    query: {
-      retry: false,
-    } as any
+    query: { retry: false } as any,
   });
 
   useEffect(() => {
@@ -44,26 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     let timeoutId: NodeJS.Timeout;
-    
+
     const resetTimer = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        logout();
-      }, 30 * 60 * 1000); // 30 minutes
+      timeoutId = setTimeout(() => { logout(); }, 30 * 60 * 1000);
     };
 
     resetTimer();
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      document.addEventListener(event, resetTimer);
-    });
+    const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    events.forEach(e => document.addEventListener(e, resetTimer));
 
     return () => {
       clearTimeout(timeoutId);
-      events.forEach(event => {
-        document.removeEventListener(event, resetTimer);
-      });
+      events.forEach(e => document.removeEventListener(e, resetTimer));
     };
   }, [user]);
 
@@ -74,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLocation("/change-password");
     } else if (userData.role === "student") {
       setLocation("/student/dashboard");
-    } else if (userData.role === "teacher") {
+    } else if (userData.role === "staff") {
       setLocation("/teacher/dashboard");
     } else {
       setLocation("/admin/dashboard");

@@ -42,7 +42,7 @@ export default function ChangePassword() {
   });
 
   if (!user) return <Redirect to="/" />;
-  if (!user.isDefaultPassword) return <Redirect to={user.role === "student" ? "/student/dashboard" : "/teacher/dashboard"} />;
+  if (!user.isDefaultPassword) return <Redirect to={user.role === "student" ? "/student/dashboard" : user.role === "staff" ? "/teacher/dashboard" : "/admin/dashboard"} />;
 
   function onSubmit(values: z.infer<typeof schema>) {
     changeMutation.mutate(
@@ -61,7 +61,7 @@ export default function ChangePassword() {
           // Update local user state
           const token = localStorage.getItem("cbt_token")!;
           login(token, { ...user!, isDefaultPassword: false });
-          setLocation(user!.role === "student" ? "/student/dashboard" : "/teacher/dashboard");
+          setLocation(user!.role === "student" ? "/student/dashboard" : user!.role === "staff" ? "/teacher/dashboard" : "/admin/dashboard");
         },
         onError: (err: any) => {
           toast({

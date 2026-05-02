@@ -15,20 +15,28 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Login for student or teacher
+ * @summary Login for student or staff (admin auto-detected)
  */
 export const LoginBody = zod.object({
   username: zod.string(),
   password: zod.string(),
-  role: zod.enum(["student", "teacher", "admin"]),
+  role: zod.enum(["student", "staff"]),
 });
 
 export const LoginResponse = zod.object({
   token: zod.string(),
-  role: zod.enum(["student", "teacher", "admin"]),
-  name: zod.string(),
+  role: zod.enum(["student", "staff", "admin"]),
+  name: zod.string().nullable(),
   isDefaultPassword: zod.boolean(),
   id: zod.string(),
+  staffRole: zod.string().nullish(),
+  permissions: zod
+    .object({
+      manage_exams: zod.boolean(),
+      view_all_results: zod.boolean(),
+      manage_students: zod.boolean(),
+    })
+    .nullish(),
 });
 
 /**
@@ -50,9 +58,17 @@ export const ChangePasswordResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
-  role: zod.enum(["student", "teacher", "admin"]),
+  role: zod.enum(["student", "staff", "admin"]),
   class: zod.string().nullish(),
   isDefaultPassword: zod.boolean(),
+  staffRole: zod.string().nullish(),
+  permissions: zod
+    .object({
+      manage_exams: zod.boolean(),
+      view_all_results: zod.boolean(),
+      manage_students: zod.boolean(),
+    })
+    .nullish(),
 });
 
 /**
@@ -138,7 +154,7 @@ export const GetStudentResultsResponse = zod.array(
 );
 
 /**
- * @summary Get all exams created by teacher
+ * @summary Get all exams created by this staff member
  */
 export const GetTeacherExamsResponseItem = zod.object({
   id: zod.number(),
@@ -329,7 +345,7 @@ export const GetExamResultsResponseItem = zod.object({
 export const GetExamResultsResponse = zod.array(GetExamResultsResponseItem);
 
 /**
- * @summary Get teacher dashboard summary
+ * @summary Get staff dashboard summary
  */
 export const GetTeacherDashboardResponse = zod.object({
   totalExams: zod.number(),
@@ -356,7 +372,7 @@ export const GetTeacherDashboardResponse = zod.object({
  */
 export const GetAdminStatsResponse = zod.object({
   totalStudents: zod.number(),
-  totalTeachers: zod.number(),
+  totalStaff: zod.number(),
   totalExams: zod.number(),
   totalResults: zod.number(),
 });
@@ -430,65 +446,124 @@ export const DeleteAdminStudentResponse = zod.object({
 });
 
 /**
- * @summary List all teachers
+ * @summary List all staff
  */
-export const GetAdminTeachersResponseItem = zod.object({
-  teacherId: zod.string(),
+export const GetAdminStaffResponseItem = zod.object({
+  staffId: zod.string(),
   name: zod.string(),
   subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+  }),
 });
-export const GetAdminTeachersResponse = zod.array(GetAdminTeachersResponseItem);
+export const GetAdminStaffResponse = zod.array(GetAdminStaffResponseItem);
 
 /**
- * @summary Create a new teacher
+ * @summary Create a new staff member
  */
-export const CreateAdminTeacherBody = zod.object({
-  teacherId: zod.string(),
+export const CreateAdminStaffBody = zod.object({
+  staffId: zod.string(),
   name: zod.string(),
   subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+  }),
   password: zod.string(),
 });
 
 /**
- * @summary Get a teacher by ID
+ * @summary Get a staff member by ID
  */
-export const GetAdminTeacherParams = zod.object({
-  teacherId: zod.coerce.string(),
+export const GetAdminStaffMemberParams = zod.object({
+  staffId: zod.coerce.string(),
 });
 
-export const GetAdminTeacherResponse = zod.object({
-  teacherId: zod.string(),
+export const GetAdminStaffMemberResponse = zod.object({
+  staffId: zod.string(),
   name: zod.string(),
   subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+  }),
 });
 
 /**
- * @summary Update a teacher
+ * @summary Update a staff member
  */
-export const UpdateAdminTeacherParams = zod.object({
-  teacherId: zod.coerce.string(),
+export const UpdateAdminStaffMemberParams = zod.object({
+  staffId: zod.coerce.string(),
 });
 
-export const UpdateAdminTeacherBody = zod.object({
+export const UpdateAdminStaffMemberBody = zod.object({
   name: zod.string(),
   subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+  }),
   password: zod.string().nullish(),
 });
 
-export const UpdateAdminTeacherResponse = zod.object({
-  teacherId: zod.string(),
+export const UpdateAdminStaffMemberResponse = zod.object({
+  staffId: zod.string(),
   name: zod.string(),
   subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+  }),
 });
 
 /**
- * @summary Delete a teacher
+ * @summary Delete a staff member
  */
-export const DeleteAdminTeacherParams = zod.object({
-  teacherId: zod.coerce.string(),
+export const DeleteAdminStaffMemberParams = zod.object({
+  staffId: zod.coerce.string(),
 });
 
-export const DeleteAdminTeacherResponse = zod.object({
+export const DeleteAdminStaffMemberResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary List all exams across all staff
+ */
+export const GetAdminExamsResponseItem = zod.object({
+  id: zod.number(),
+  subject: zod.string(),
+  class: zod.string(),
+  durationMinutes: zod.number(),
+  startTime: zod.string().nullish(),
+  endTime: zod.string().nullish(),
+  createdBy: zod.string(),
+  questionCount: zod.number(),
+  attemptCount: zod.number(),
+  averageScore: zod.number().nullish(),
+});
+export const GetAdminExamsResponse = zod.array(GetAdminExamsResponseItem);
+
+/**
+ * @summary Delete any exam
+ */
+export const DeleteAdminExamParams = zod.object({
+  examId: zod.coerce.number(),
+});
+
+export const DeleteAdminExamResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
 });

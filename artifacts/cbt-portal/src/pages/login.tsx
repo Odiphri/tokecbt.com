@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Redirect } from "wouter";
@@ -27,40 +27,38 @@ const loginSchema = z.object({
 
 export default function Login() {
   const { user, login } = useAuth();
-  const [role, setRole] = useState<"student" | "teacher" | "admin">("student");
+  const [role, setRole] = useState<"student" | "staff">("student");
   const loginMutation = useLogin();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+    defaultValues: { username: "", password: "" },
   });
 
   if (user) {
-    const dest = user.role === "student" ? "/student/dashboard" : user.role === "teacher" ? "/teacher/dashboard" : "/admin/dashboard";
+    const dest =
+      user.role === "student"
+        ? "/student/dashboard"
+        : user.role === "staff"
+        ? "/teacher/dashboard"
+        : "/admin/dashboard";
     return <Redirect to={dest} />;
   }
 
   function onSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate(
-      {
-        data: {
-          username: values.username,
-          password: values.password,
-          role,
-        },
-      },
+      { data: { username: values.username, password: values.password, role } },
       {
         onSuccess: (data) => {
           login(data.token, {
             id: data.id,
-            name: data.name,
+            name: data.name ?? "",
             role: data.role as any,
             isDefaultPassword: data.isDefaultPassword,
-          });
+            staffRole: data.staffRole ?? undefined,
+            permissions: data.permissions ?? undefined,
+          } as any);
         },
         onError: (err: any) => {
           toast({
@@ -88,13 +86,18 @@ export default function Login() {
             <CardDescription>Enter your credentials to access the portal</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={role} onValueChange={(v) => setRole(v as "student" | "teacher" | "admin")} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={role} onValueChange={(v) => setRole(v as "student" | "staff")} className="w-full mb-6">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="student">Student</TabsTrigger>
-                <TabsTrigger value="teacher">Teacher</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
+                <TabsTrigger value="staff">Staff</TabsTrigger>
               </TabsList>
             </Tabs>
+
+            {role === "staff" && (
+              <p className="text-xs text-muted-foreground mb-4 bg-blue-50 border border-blue-100 rounded-md p-2">
+                Staff includes teachers, HODs, librarians, and administrators.
+              </p>
+            )}
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -103,9 +106,12 @@ export default function Login() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{role === "student" ? "Student ID" : role === "teacher" ? "Teacher ID" : "Username"}</FormLabel>
+                      <FormLabel>{role === "student" ? "Student ID" : "Staff ID"}</FormLabel>
                       <FormControl>
-                        <Input placeholder={role === "student" ? "Enter your student ID" : role === "teacher" ? "Enter your teacher ID" : "Enter admin username"} {...field} />
+                        <Input
+                          placeholder={role === "student" ? "Enter your student ID" : "Enter your staff ID"}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

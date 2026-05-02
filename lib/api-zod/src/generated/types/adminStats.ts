@@ -8,7 +8,7 @@
 
 export interface AdminStats {
   totalStudents: number;
-  totalTeachers: number;
+  totalStaff: number;
   totalExams: number;
   totalResults: number;
 }

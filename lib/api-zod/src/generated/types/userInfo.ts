@@ -5,6 +5,7 @@
  * Toke Schools CBT Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { StaffPermissions } from "./staffPermissions";
 import type { UserInfoRole } from "./userInfoRole";
 
 export interface UserInfo {
@@ -13,4 +14,6 @@ export interface UserInfo {
   role: UserInfoRole;
   class?: string | null;
   isDefaultPassword: boolean;
+  staffRole?: string | null;
+  permissions?: StaffPermissions | null;
 }

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, studentsTable, teachersTable, examsTable, resultsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, studentsTable, teachersTable, examsTable, resultsTable, DEFAULT_PERMISSIONS_BY_ROLE } from "@workspace/db";
+import { eq, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   CreateAdminStudentBody,
@@ -9,30 +9,35 @@ import {
   GetAdminStudentParams,
   UpdateAdminStudentParams,
   DeleteAdminStudentParams,
-  CreateAdminTeacherBody,
-  UpdateAdminTeacherBody,
-  GetAdminTeacherParams,
-  UpdateAdminTeacherParams,
-  DeleteAdminTeacherParams,
+  CreateAdminStaffBody,
+  UpdateAdminStaffMemberBody,
+  GetAdminStaffMemberParams,
+  UpdateAdminStaffMemberParams,
+  DeleteAdminStaffMemberParams,
+  DeleteAdminExamParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-router.use(requireAuth, requireRole("admin"));
+router.use("/admin", requireAuth, requireRole("admin"));
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
 
 router.get("/admin/stats", async (_req, res): Promise<void> => {
   const [{ totalStudents }] = await db.select({ totalStudents: sql<number>`cast(count(*) as int)` }).from(studentsTable);
-  const [{ totalTeachers }] = await db.select({ totalTeachers: sql<number>`cast(count(*) as int)` }).from(teachersTable);
+  const [{ totalStaff }] = await db.select({ totalStaff: sql<number>`cast(count(*) as int)` }).from(teachersTable);
   const [{ totalExams }] = await db.select({ totalExams: sql<number>`cast(count(*) as int)` }).from(examsTable);
   const [{ totalResults }] = await db.select({ totalResults: sql<number>`cast(count(*) as int)` }).from(resultsTable);
 
   res.json({
     totalStudents: totalStudents ?? 0,
-    totalTeachers: totalTeachers ?? 0,
+    totalStaff: totalStaff ?? 0,
     totalExams: totalExams ?? 0,
     totalResults: totalResults ?? 0,
   });
 });
+
+// ─── Students ────────────────────────────────────────────────────────────────
 
 router.get("/admin/students", async (_req, res): Promise<void> => {
   const students = await db.select().from(studentsTable).orderBy(studentsTable.name);
@@ -114,7 +119,7 @@ router.put("/admin/students/:regNumber", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateValues: Partial<typeof existing> = {
+  const updateValues: Record<string, unknown> = {
     name: body.data.name,
     class: body.data.class,
   };
@@ -158,119 +163,181 @@ router.delete("/admin/students/:regNumber", async (req, res): Promise<void> => {
   res.json({ success: true, message: "Student deleted" });
 });
 
-router.get("/admin/teachers", async (_req, res): Promise<void> => {
-  const teachers = await db.select().from(teachersTable).orderBy(teachersTable.name);
-  res.json(teachers.map(t => ({
-    teacherId: t.teacherId,
+// ─── Staff ───────────────────────────────────────────────────────────────────
+
+router.get("/admin/staff", async (_req, res): Promise<void> => {
+  const staff = await db.select().from(teachersTable).orderBy(teachersTable.name);
+  res.json(staff.map(t => ({
+    staffId: t.teacherId,
     name: t.name,
     subject: t.subject,
+    staffRole: t.staffRole,
+    permissions: t.permissions,
   })));
 });
 
-router.post("/admin/teachers", async (req, res): Promise<void> => {
-  const parsed = CreateAdminTeacherBody.safeParse(req.body);
+router.post("/admin/staff", async (req, res): Promise<void> => {
+  const parsed = CreateAdminStaffBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, parsed.data.teacherId));
+  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, parsed.data.staffId));
   if (existing) {
-    res.status(409).json({ error: "A teacher with this ID already exists" });
+    res.status(409).json({ error: "A staff member with this ID already exists" });
     return;
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-  const [teacher] = await db.insert(teachersTable).values({
-    teacherId: parsed.data.teacherId,
+  const permissions = parsed.data.permissions ?? DEFAULT_PERMISSIONS_BY_ROLE[parsed.data.staffRole as keyof typeof DEFAULT_PERMISSIONS_BY_ROLE] ?? DEFAULT_PERMISSIONS_BY_ROLE.teacher;
+
+  const [staff] = await db.insert(teachersTable).values({
+    teacherId: parsed.data.staffId,
     name: parsed.data.name,
     subject: parsed.data.subject,
     passwordHash,
+    staffRole: parsed.data.staffRole,
+    permissions,
   }).returning();
 
   res.status(201).json({
-    teacherId: teacher.teacherId,
-    name: teacher.name,
-    subject: teacher.subject,
+    staffId: staff.teacherId,
+    name: staff.name,
+    subject: staff.subject,
+    staffRole: staff.staffRole,
+    permissions: staff.permissions,
   });
 });
 
-router.get("/admin/teachers/:teacherId", async (req, res): Promise<void> => {
-  const params = GetAdminTeacherParams.safeParse(req.params);
+router.get("/admin/staff/:staffId", async (req, res): Promise<void> => {
+  const params = GetAdminStaffMemberParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.teacherId));
-  if (!teacher) {
-    res.status(404).json({ error: "Teacher not found" });
+  const [staff] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.staffId));
+  if (!staff) {
+    res.status(404).json({ error: "Staff not found" });
     return;
   }
 
   res.json({
-    teacherId: teacher.teacherId,
-    name: teacher.name,
-    subject: teacher.subject,
+    staffId: staff.teacherId,
+    name: staff.name,
+    subject: staff.subject,
+    staffRole: staff.staffRole,
+    permissions: staff.permissions,
   });
 });
 
-router.put("/admin/teachers/:teacherId", async (req, res): Promise<void> => {
-  const params = UpdateAdminTeacherParams.safeParse(req.params);
+router.put("/admin/staff/:staffId", async (req, res): Promise<void> => {
+  const params = UpdateAdminStaffMemberParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const body = UpdateAdminTeacherBody.safeParse(req.body);
+  const body = UpdateAdminStaffMemberBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
   }
 
-  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.teacherId));
+  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.staffId));
   if (!existing) {
-    res.status(404).json({ error: "Teacher not found" });
+    res.status(404).json({ error: "Staff not found" });
     return;
   }
 
-  const updateValues: Partial<typeof existing> = {
+  const updateValues: Record<string, unknown> = {
     name: body.data.name,
     subject: body.data.subject,
+    staffRole: body.data.staffRole,
+    permissions: body.data.permissions,
   };
 
   if (body.data.password) {
     updateValues.passwordHash = await bcrypt.hash(body.data.password, 10);
   }
 
-  const [teacher] = await db
+  const [staff] = await db
     .update(teachersTable)
     .set(updateValues)
-    .where(eq(teachersTable.teacherId, params.data.teacherId))
+    .where(eq(teachersTable.teacherId, params.data.staffId))
     .returning();
 
   res.json({
-    teacherId: teacher.teacherId,
-    name: teacher.name,
-    subject: teacher.subject,
+    staffId: staff.teacherId,
+    name: staff.name,
+    subject: staff.subject,
+    staffRole: staff.staffRole,
+    permissions: staff.permissions,
   });
 });
 
-router.delete("/admin/teachers/:teacherId", async (req, res): Promise<void> => {
-  const params = DeleteAdminTeacherParams.safeParse(req.params);
+router.delete("/admin/staff/:staffId", async (req, res): Promise<void> => {
+  const params = DeleteAdminStaffMemberParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.teacherId));
+  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, params.data.staffId));
   if (!existing) {
-    res.status(404).json({ error: "Teacher not found" });
+    res.status(404).json({ error: "Staff not found" });
     return;
   }
 
-  await db.delete(teachersTable).where(eq(teachersTable.teacherId, params.data.teacherId));
-  res.json({ success: true, message: "Teacher deleted" });
+  await db.delete(teachersTable).where(eq(teachersTable.teacherId, params.data.staffId));
+  res.json({ success: true, message: "Staff member deleted" });
+});
+
+// ─── Admin Exams (view all exams across all staff) ────────────────────────
+
+router.get("/admin/exams", async (_req, res): Promise<void> => {
+  const exams = await db
+    .select({
+      id: examsTable.id,
+      subject: examsTable.subject,
+      class: examsTable.class,
+      durationMinutes: examsTable.durationMinutes,
+      startTime: examsTable.startTime,
+      endTime: examsTable.endTime,
+      createdBy: examsTable.createdBy,
+      questionCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
+      attemptCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
+      averageScore: sql<number | null>`avg(cast(${resultsTable.score} as float) / nullif(${resultsTable.total}, 0) * 100)`,
+    })
+    .from(examsTable)
+    .leftJoin(resultsTable, eq(resultsTable.examId, examsTable.id))
+    .groupBy(examsTable.id)
+    .orderBy(desc(examsTable.createdAt));
+
+  res.json(exams.map(e => ({
+    ...e,
+    startTime: e.startTime?.toISOString() ?? null,
+    endTime: e.endTime?.toISOString() ?? null,
+    averageScore: e.averageScore != null ? Math.round(Number(e.averageScore) * 100) / 100 : null,
+  })));
+});
+
+router.delete("/admin/exams/:examId", async (req, res): Promise<void> => {
+  const params = DeleteAdminExamParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(examsTable).where(eq(examsTable.id, params.data.examId));
+  if (!existing) {
+    res.status(404).json({ error: "Exam not found" });
+    return;
+  }
+
+  await db.delete(examsTable).where(eq(examsTable.id, params.data.examId));
+  res.json({ success: true, message: "Exam deleted" });
 });
 
 export default router;

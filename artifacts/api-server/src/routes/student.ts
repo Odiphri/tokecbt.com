@@ -6,7 +6,7 @@ import { SubmitExamBody, GetStudentExamParams, SubmitExamParams } from "@workspa
 
 const router: IRouter = Router();
 
-router.use(requireAuth, requireRole("student"));
+router.use("/student", requireAuth, requireRole("student"));
 
 router.get("/student/exams", async (req, res): Promise<void> => {
   const user = req.user!;
