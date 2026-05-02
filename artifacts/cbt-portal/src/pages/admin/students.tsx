@@ -4,6 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CLASS_SECTIONS } from "@/lib/class-sections";
 
 type StudentForm = { regNumber: string; name: string; class: string; password: string };
 type EditForm = { name: string; class: string; newPassword: string; resetPassword: boolean };
@@ -126,7 +134,8 @@ export default function AdminStudents() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <CardTitle>All Students</CardTitle>
+          <div className="flex items-center gap-4 mt-2">
             <Input
               placeholder="Search by name, ID or class..."
               value={search}
@@ -164,7 +173,9 @@ export default function AdminStudents() {
                   <TableRow key={student.regNumber}>
                     <TableCell className="font-mono text-sm">{student.regNumber}</TableCell>
                     <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.class}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono">{student.class}</Badge>
+                    </TableCell>
                     <TableCell>
                       {student.isDefaultPassword ? (
                         <Badge variant="destructive">Default</Badge>
@@ -204,8 +215,17 @@ export default function AdminStudents() {
               <Input value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. John Doe" />
             </div>
             <div>
-              <Label>Class</Label>
-              <Input value={addForm.class} onChange={e => setAddForm(f => ({ ...f, class: e.target.value }))} placeholder="e.g. JSS 1A" />
+              <Label>Class / Section</Label>
+              <Select value={addForm.class} onValueChange={v => setAddForm(f => ({ ...f, class: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Initial Password</Label>
@@ -234,11 +254,20 @@ export default function AdminStudents() {
               <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
-              <Label>Class</Label>
-              <Input value={editForm.class} onChange={e => setEditForm(f => ({ ...f, class: e.target.value }))} />
+              <Label>Class / Section</Label>
+              <Select value={editForm.class} onValueChange={v => setEditForm(f => ({ ...f, class: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label>New Password (leave blank to keep current)</Label>
+              <Label>New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
               <Input type="password" value={editForm.newPassword} onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="New password" />
             </div>
             <div className="flex items-center gap-2">
