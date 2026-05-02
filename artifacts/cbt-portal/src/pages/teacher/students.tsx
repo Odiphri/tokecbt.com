@@ -6,6 +6,13 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CLASS_SECTIONS } from "@/lib/class-sections";
 
 type StudentForm = { regNumber: string; name: string; class: string; password: string };
 type EditForm = { name: string; class: string; newPassword: string; resetPassword: boolean };
@@ -35,10 +43,7 @@ type EditForm = { name: string; class: string; newPassword: string; resetPasswor
 export default function StaffStudents() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const qc = useQueryClient();
-  const { toast } = useToast();
 
-  // Gate: redirect if permission missing
   if (!user?.permissions?.manage_students) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
@@ -54,10 +59,10 @@ export default function StaffStudents() {
     );
   }
 
-  return <StudentsContent queryKey="/api/teacher/students" />;
+  return <StudentsContent />;
 }
 
-function StudentsContent({ queryKey }: { queryKey: string }) {
+function StudentsContent() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: students, isLoading } = useGetTeacherStudents();
@@ -208,7 +213,9 @@ function StudentsContent({ queryKey }: { queryKey: string }) {
                   <TableRow key={student.regNumber}>
                     <TableCell className="font-mono text-sm">{student.regNumber}</TableCell>
                     <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.class}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono">{student.class}</Badge>
+                    </TableCell>
                     <TableCell>
                       {student.isDefaultPassword ? (
                         <Badge variant="destructive">Default</Badge>
@@ -261,12 +268,17 @@ function StudentsContent({ queryKey }: { queryKey: string }) {
               />
             </div>
             <div>
-              <Label>Class</Label>
-              <Input
-                value={addForm.class}
-                onChange={e => setAddForm(f => ({ ...f, class: e.target.value }))}
-                placeholder="e.g. JSS 1A"
-              />
+              <Label>Class / Section</Label>
+              <Select value={addForm.class} onValueChange={v => setAddForm(f => ({ ...f, class: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Initial Password</Label>
@@ -299,8 +311,17 @@ function StudentsContent({ queryKey }: { queryKey: string }) {
               <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
-              <Label>Class</Label>
-              <Input value={editForm.class} onChange={e => setEditForm(f => ({ ...f, class: e.target.value }))} />
+              <Label>Class / Section</Label>
+              <Select value={editForm.class} onValueChange={v => setEditForm(f => ({ ...f, class: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
@@ -314,12 +335,12 @@ function StudentsContent({ queryKey }: { queryKey: string }) {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="reset-pw"
+                id="reset-pw-teacher"
                 checked={editForm.resetPassword}
                 onChange={e => setEditForm(f => ({ ...f, resetPassword: e.target.checked }))}
                 className="h-4 w-4"
               />
-              <label htmlFor="reset-pw" className="text-sm cursor-pointer flex items-center gap-1">
+              <label htmlFor="reset-pw-teacher" className="text-sm cursor-pointer flex items-center gap-1">
                 <RotateCcw className="h-3.5 w-3.5" />
                 Reset to default password (12345)
               </label>

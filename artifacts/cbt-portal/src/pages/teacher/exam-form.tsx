@@ -15,11 +15,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { CLASS_SECTIONS } from "@/lib/class-sections";
 
 const schema = z.object({
   subject: z.string().min(1, "Subject is required"),
@@ -37,9 +45,7 @@ export default function ExamForm() {
   const queryClient = useQueryClient();
 
   const { data: exam, isLoading: isExamLoading } = useGetTeacherExam(id, {
-    query: {
-      enabled: isEdit,
-    } as any
+    query: { enabled: isEdit } as any
   });
 
   const createMutation = useCreateExam();
@@ -66,40 +72,25 @@ export default function ExamForm() {
 
   const onSubmit = (values: z.infer<typeof schema>) => {
     if (isEdit) {
-      updateMutation.mutate({
-        examId: id,
-        data: values,
-      }, {
+      updateMutation.mutate({ examId: id, data: values }, {
         onSuccess: () => {
           toast({ title: "Exam updated successfully" });
           queryClient.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetTeacherExamQueryKey(id) });
           setLocation(`/teacher/exams/${id}`);
         },
-        onError: (err: any) => {
-          toast({
-            variant: "destructive",
-            title: "Failed to update exam",
-            description: err.data?.error || "Please try again.",
-          });
-        }
+        onError: (err: any) =>
+          toast({ variant: "destructive", title: "Failed to update exam", description: err.data?.error || "Please try again." }),
       });
     } else {
-      createMutation.mutate({
-        data: values,
-      }, {
+      createMutation.mutate({ data: values }, {
         onSuccess: (data) => {
           toast({ title: "Exam created successfully" });
           queryClient.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
           setLocation(`/teacher/exams/${data.id}`);
         },
-        onError: (err: any) => {
-          toast({
-            variant: "destructive",
-            title: "Failed to create exam",
-            description: err.data?.error || "Please try again.",
-          });
-        }
+        onError: (err: any) =>
+          toast({ variant: "destructive", title: "Failed to create exam", description: err.data?.error || "Please try again." }),
       });
     }
   };
@@ -149,18 +140,27 @@ export default function ExamForm() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="class"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Class/Grade</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. JSS 1" {...field} />
-                    </FormControl>
+                    <FormLabel>Class / Section</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a class section" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CLASS_SECTIONS.map(cls => (
+                          <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Students in this class will see the exam on their dashboard.
+                      Only students enrolled in this class section will see the exam.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
