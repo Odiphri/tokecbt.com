@@ -17,6 +17,7 @@ import StaffExams from "@/pages/teacher/exams";
 import ExamForm from "@/pages/teacher/exam-form";
 import ExamDetail from "@/pages/teacher/exam-detail";
 import ExamResults from "@/pages/teacher/exam-results";
+import StaffStudents from "@/pages/teacher/students";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
 import AdminStaff from "@/pages/admin/staff";
@@ -41,6 +42,7 @@ function Router() {
       <ProtectedRoute path="/teacher/exams/:examId" role="staff" component={ExamDetail} />
       <ProtectedRoute path="/teacher/exams/:examId/edit" role="staff" component={ExamForm} />
       <ProtectedRoute path="/teacher/exams/:examId/results" role="staff" component={ExamResults} />
+      <ProtectedRoute path="/teacher/students" role="staff" component={StaffStudents} />
 
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />

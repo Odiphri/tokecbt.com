@@ -156,6 +156,62 @@ export const GetStudentResultsResponse = zod.array(
 );
 
 /**
+ * @summary List all students (requires manage_students permission)
+ */
+export const GetTeacherStudentsResponseItem = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+});
+export const GetTeacherStudentsResponse = zod.array(
+  GetTeacherStudentsResponseItem,
+);
+
+/**
+ * @summary Create a new student (requires manage_students permission)
+ */
+export const CreateTeacherStudentBody = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  password: zod.string(),
+});
+
+/**
+ * @summary Update a student (requires manage_students permission)
+ */
+export const UpdateTeacherStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const UpdateTeacherStudentBody = zod.object({
+  name: zod.string(),
+  class: zod.string(),
+  password: zod.string().nullish(),
+  resetPassword: zod.boolean().optional(),
+});
+
+export const UpdateTeacherStudentResponse = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+});
+
+/**
+ * @summary Delete a student (requires manage_students permission)
+ */
+export const DeleteTeacherStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const DeleteTeacherStudentResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
  * @summary Get all exams created by this staff member
  */
 export const GetTeacherExamsResponseItem = zod.object({
