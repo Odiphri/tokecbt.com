@@ -39,6 +39,7 @@ import type {
   SubmitExamBody,
   SuccessResponse,
   TeacherDashboard,
+  ToggleExamResultsBody,
   UpdateStaffBody,
   UpdateStudentBody,
   UserInfo,
@@ -1178,6 +1179,93 @@ export const useCreateExam = <
   TContext
 > => {
   return useMutation(getCreateExamMutationOptions(options));
+};
+
+/**
+ * @summary Enable or disable result visibility for an exam
+ */
+export const getToggleExamResultsUrl = (examId: number) => {
+  return `/api/teacher/exams/${examId}/toggle-results`;
+};
+
+export const toggleExamResults = async (
+  examId: number,
+  toggleExamResultsBody: ToggleExamResultsBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getToggleExamResultsUrl(examId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(toggleExamResultsBody),
+  });
+};
+
+export const getToggleExamResultsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleExamResults>>,
+    TError,
+    { examId: number; data: BodyType<ToggleExamResultsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleExamResults>>,
+  TError,
+  { examId: number; data: BodyType<ToggleExamResultsBody> },
+  TContext
+> => {
+  const mutationKey = ["toggleExamResults"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleExamResults>>,
+    { examId: number; data: BodyType<ToggleExamResultsBody> }
+  > = (props) => {
+    const { examId, data } = props ?? {};
+
+    return toggleExamResults(examId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleExamResultsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleExamResults>>
+>;
+export type ToggleExamResultsMutationBody = BodyType<ToggleExamResultsBody>;
+export type ToggleExamResultsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Enable or disable result visibility for an exam
+ */
+export const useToggleExamResults = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleExamResults>>,
+    TError,
+    { examId: number; data: BodyType<ToggleExamResultsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleExamResults>>,
+  TError,
+  { examId: number; data: BodyType<ToggleExamResultsBody> },
+  TContext
+> => {
+  return useMutation(getToggleExamResultsMutationOptions(options));
 };
 
 /**

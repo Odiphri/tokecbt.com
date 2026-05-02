@@ -1,10 +1,10 @@
-import { useAuth } from "@/lib/auth";
 import { useGetStudentResults } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock } from "lucide-react";
 
 export default function StudentResults() {
   const { data: results, isLoading } = useGetStudentResults();
@@ -47,6 +47,23 @@ export default function StudentResults() {
               </TableHeader>
               <TableBody>
                 {results?.map((result) => {
+                  if (!result.resultsReleased) {
+                    return (
+                      <TableRow key={result.id}>
+                        <TableCell>{format(new Date(result.submittedAt), "PPP")}</TableCell>
+                        <TableCell className="font-medium">{result.subject}</TableCell>
+                        <TableCell colSpan={3}>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-sm italic">Results not yet released</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">Pending</Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
                   const isPass = result.percentage >= 50;
                   return (
                     <TableRow key={result.id}>

@@ -17,4 +17,5 @@ export interface ExamWithStats {
   questionCount: number;
   attemptCount: number;
   averageScore?: number | null;
+  resultsEnabled: boolean;
 }

@@ -85,6 +85,7 @@ export const GetStudentExamsResponseItem = zod.object({
   endTime: zod.string().nullish(),
   createdBy: zod.string(),
   questionCount: zod.number(),
+  resultsEnabled: zod.boolean(),
 });
 export const GetStudentExamsResponse = zod.array(GetStudentExamsResponseItem);
 
@@ -150,6 +151,7 @@ export const GetStudentResultsResponseItem = zod.object({
   percentage: zod.number(),
   grade: zod.string(),
   submittedAt: zod.string(),
+  resultsReleased: zod.boolean(),
 });
 export const GetStudentResultsResponse = zod.array(
   GetStudentResultsResponseItem,
@@ -225,6 +227,7 @@ export const GetTeacherExamsResponseItem = zod.object({
   questionCount: zod.number(),
   attemptCount: zod.number(),
   averageScore: zod.number().nullish(),
+  resultsEnabled: zod.boolean(),
 });
 export const GetTeacherExamsResponse = zod.array(GetTeacherExamsResponseItem);
 
@@ -237,6 +240,22 @@ export const CreateExamBody = zod.object({
   durationMinutes: zod.number(),
   startTime: zod.string().nullish(),
   endTime: zod.string().nullish(),
+});
+
+/**
+ * @summary Enable or disable result visibility for an exam
+ */
+export const ToggleExamResultsParams = zod.object({
+  examId: zod.coerce.number(),
+});
+
+export const ToggleExamResultsBody = zod.object({
+  enabled: zod.boolean(),
+});
+
+export const ToggleExamResultsResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
 });
 
 /**
@@ -292,6 +311,7 @@ export const UpdateExamResponse = zod.object({
   endTime: zod.string().nullish(),
   createdBy: zod.string(),
   questionCount: zod.number(),
+  resultsEnabled: zod.boolean(),
 });
 
 /**
@@ -616,6 +636,7 @@ export const GetAdminExamsResponseItem = zod.object({
   questionCount: zod.number(),
   attemptCount: zod.number(),
   averageScore: zod.number().nullish(),
+  resultsEnabled: zod.boolean(),
 });
 export const GetAdminExamsResponse = zod.array(GetAdminExamsResponseItem);
 

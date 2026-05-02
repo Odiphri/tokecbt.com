@@ -15,4 +15,5 @@ export interface Exam {
   endTime?: string | null;
   createdBy: string;
   questionCount: number;
+  resultsEnabled: boolean;
 }

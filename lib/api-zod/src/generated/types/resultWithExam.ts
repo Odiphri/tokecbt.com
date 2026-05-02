@@ -16,4 +16,5 @@ export interface ResultWithExam {
   percentage: number;
   grade: string;
   submittedAt: string;
+  resultsReleased: boolean;
 }

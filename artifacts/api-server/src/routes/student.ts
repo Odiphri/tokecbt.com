@@ -223,6 +223,7 @@ router.get("/student/results", async (req, res): Promise<void> => {
       score: resultsTable.score,
       total: resultsTable.total,
       submittedAt: resultsTable.submittedAt,
+      resultsEnabled: examsTable.resultsEnabled,
     })
     .from(resultsTable)
     .innerJoin(examsTable, eq(examsTable.id, resultsTable.examId))
@@ -247,6 +248,7 @@ router.get("/student/results", async (req, res): Promise<void> => {
       percentage: Math.round(percentage * 100) / 100,
       grade,
       submittedAt: r.submittedAt.toISOString(),
+      resultsReleased: r.resultsEnabled,
     };
   });
 
