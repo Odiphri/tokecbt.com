@@ -159,6 +159,7 @@ router.delete("/admin/students/:regNumber", async (req, res): Promise<void> => {
     return;
   }
 
+  await db.delete(resultsTable).where(eq(resultsTable.studentReg, params.data.regNumber));
   await db.delete(studentsTable).where(eq(studentsTable.regNumber, params.data.regNumber));
   res.json({ success: true, message: "Student deleted" });
 });

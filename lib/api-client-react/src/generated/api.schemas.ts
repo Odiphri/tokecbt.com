@@ -142,6 +142,7 @@ export interface Exam {
   endTime?: string | null;
   createdBy: string;
   questionCount: number;
+  resultsEnabled: boolean;
 }
 
 export interface ExamWithStats {
@@ -155,6 +156,7 @@ export interface ExamWithStats {
   questionCount: number;
   attemptCount: number;
   averageScore?: number | null;
+  resultsEnabled: boolean;
 }
 
 export type QuestionCorrectOption =
@@ -241,6 +243,7 @@ export interface ResultWithExam {
   percentage: number;
   grade: string;
   submittedAt: string;
+  resultsReleased: boolean;
 }
 
 export interface ResultWithStudent {
@@ -262,3 +265,7 @@ export interface TeacherDashboard {
   averageScore?: number | null;
   recentResults: ResultWithStudent[];
 }
+
+export type ToggleExamResultsBody = {
+  enabled: boolean;
+};

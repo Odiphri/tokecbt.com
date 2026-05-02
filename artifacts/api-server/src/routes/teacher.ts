@@ -112,6 +112,7 @@ router.delete("/teacher/students/:regNumber", async (req, res): Promise<void> =>
     return;
   }
   const { regNumber } = req.params;
+  await db.delete(resultsTable).where(eq(resultsTable.studentReg, regNumber));
   await db.delete(studentsTable).where(eq(studentsTable.regNumber, regNumber));
   res.json({ success: true });
 });
@@ -211,6 +212,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
       questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
       attemptCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
       averageScore: sql<number | null>`avg(cast(${resultsTable.score} as float) / nullif(${resultsTable.total}, 0) * 100)`,
+      resultsEnabled: examsTable.resultsEnabled,
     })
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
@@ -224,6 +226,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
     startTime: e.startTime?.toISOString() ?? null,
     endTime: e.endTime?.toISOString() ?? null,
     averageScore: e.averageScore != null ? Math.round(Number(e.averageScore) * 100) / 100 : null,
+    resultsEnabled: e.resultsEnabled,
   })));
 });
 
@@ -261,6 +264,7 @@ router.post("/teacher/exams", async (req, res): Promise<void> => {
     endTime: exam.endTime?.toISOString() ?? null,
     createdBy: exam.createdBy,
     questionCount: 0,
+    resultsEnabled: exam.resultsEnabled,
   });
 });
 
@@ -300,6 +304,7 @@ router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
     startTime: exam.startTime?.toISOString() ?? null,
     endTime: exam.endTime?.toISOString() ?? null,
     createdBy: exam.createdBy,
+    resultsEnabled: exam.resultsEnabled,
     questions,
   });
 });
@@ -364,6 +369,7 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
     endTime: exam.endTime?.toISOString() ?? null,
     createdBy: exam.createdBy,
     questionCount: questionCount ?? 0,
+    resultsEnabled: exam.resultsEnabled,
   });
 });
 
@@ -396,8 +402,35 @@ router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
   }
 
   await db.delete(examsTable).where(eq(examsTable.id, params.data.examId));
-
   res.json({ success: true, message: "Exam deleted" });
+});
+
+router.patch("/teacher/exams/:examId/toggle-results", async (req, res): Promise<void> => {
+  const user = req.user!;
+  const viewAll = canViewAll(user);
+  const examId = parseInt(req.params.examId, 10);
+  if (isNaN(examId)) { res.status(400).json({ error: "Invalid exam ID" }); return; }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to modify this exam" });
+    return;
+  }
+
+  const { enabled } = req.body as { enabled: unknown };
+  if (typeof enabled !== "boolean") {
+    res.status(400).json({ error: "enabled must be a boolean" });
+    return;
+  }
+
+  const condition = viewAll
+    ? eq(examsTable.id, examId)
+    : and(eq(examsTable.id, examId), eq(examsTable.createdBy, user.id));
+
+  const [existing] = await db.select().from(examsTable).where(condition);
+  if (!existing) { res.status(404).json({ error: "Exam not found" }); return; }
+
+  await db.update(examsTable).set({ resultsEnabled: enabled }).where(eq(examsTable.id, examId));
+  res.json({ success: true, message: enabled ? "Results enabled" : "Results disabled" });
 });
 
 router.get("/teacher/exams/:examId/questions", async (req, res): Promise<void> => {
