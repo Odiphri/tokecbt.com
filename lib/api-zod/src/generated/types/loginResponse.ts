@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { LoginResponseRole } from "./loginResponseRole";
+import type { StaffPermissions } from "./staffPermissions";
 
 export interface LoginResponse {
   token: string;
   role: LoginResponseRole;
-  name: string;
+  name: string | null;
   isDefaultPassword: boolean;
   id: string;
+  staffRole?: string | null;
+  permissions?: StaffPermissions | null;
 }

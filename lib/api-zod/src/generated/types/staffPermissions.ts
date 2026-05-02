@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UpdateTeacherBody {
-  name: string;
-  subject: string;
-  password?: string | null;
+export interface StaffPermissions {
+  manage_exams: boolean;
+  view_all_results: boolean;
+  manage_students: boolean;
 }

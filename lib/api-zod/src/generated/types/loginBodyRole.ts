@@ -10,6 +10,5 @@ export type LoginBodyRole = (typeof LoginBodyRole)[keyof typeof LoginBodyRole];
 
 export const LoginBodyRole = {
   student: "student",
-  teacher: "teacher",
-  admin: "admin",
+  staff: "staff",
 } as const;

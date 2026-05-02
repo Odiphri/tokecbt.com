@@ -32,9 +32,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="h-6 w-6" />
               <span>TOKE SCHOOLS</span>
             </div>
-            <div className="mt-4 text-sm font-medium opacity-90">
-              Student Portal
-            </div>
+            <div className="mt-4 text-sm font-medium opacity-90">Student Portal</div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
@@ -84,9 +82,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
-            <div className="mx-auto max-w-6xl">
-              {children}
-            </div>
+            <div className="mx-auto max-w-6xl">{children}</div>
           </main>
         </div>
       </div>
@@ -94,11 +90,15 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function TeacherLayout({ children }: { children: React.ReactNode }) {
+export function StaffLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
 
-  if (!user || user.role !== "teacher") return null;
+  if (!user || user.role !== "staff") return null;
+
+  const staffRoleLabel = user.staffRole
+    ? user.staffRole.charAt(0).toUpperCase() + user.staffRole.slice(1)
+    : "Staff";
 
   return (
     <SidebarProvider>
@@ -109,9 +109,7 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
               <BookOpen className="h-6 w-6" />
               <span>TOKE SCHOOLS</span>
             </div>
-            <div className="mt-4 text-sm font-medium opacity-90">
-              Teacher Portal
-            </div>
+            <div className="mt-4 text-sm font-medium opacity-90">Staff Portal</div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
@@ -142,7 +140,7 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{user.name}</span>
-                <span className="text-xs text-muted-foreground">Teacher</span>
+                <span className="text-xs text-muted-foreground">{staffRoleLabel}</span>
               </div>
               <Button variant="outline" className="w-full justify-start" onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -156,14 +154,10 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6 shadow-sm">
             <SidebarTrigger />
             <div className="flex-1" />
-            <div className="text-sm font-medium text-primary hidden sm:block">
-              {user.name}
-            </div>
+            <div className="text-sm font-medium text-primary hidden sm:block">{user.name}</div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
-            <div className="mx-auto max-w-6xl">
-              {children}
-            </div>
+            <div className="mx-auto max-w-6xl">{children}</div>
           </main>
         </div>
       </div>
@@ -213,10 +207,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/teachers")}>
-                      <Link href="/admin/teachers">
+                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/staff")}>
+                      <Link href="/admin/staff">
                         <Users />
-                        <span>Teachers</span>
+                        <span>Staff</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -247,12 +241,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
-            <div className="mx-auto max-w-6xl">
-              {children}
-            </div>
+            <div className="mx-auto max-w-6xl">{children}</div>
           </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
+
+export { StaffLayout as TeacherLayout };

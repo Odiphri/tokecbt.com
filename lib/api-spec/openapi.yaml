@@ -14,8 +14,8 @@ tags:
     description: Authentication
   - name: students
     description: Student operations
-  - name: teachers
-    description: Teacher operations
+  - name: staff
+    description: Staff operations
   - name: exams
     description: Exam management
   - name: admin
@@ -42,7 +42,7 @@ paths:
     post:
       operationId: login
       tags: [auth]
-      summary: Login for student or teacher
+      summary: Login for student or staff (admin auto-detected)
       requestBody:
         required: true
         content:
@@ -172,8 +172,8 @@ paths:
   /teacher/exams:
     get:
       operationId: getTeacherExams
-      tags: [teachers]
-      summary: Get all exams created by teacher
+      tags: [staff]
+      summary: Get all exams created by this staff member
       responses:
         "200":
           description: List of exams
@@ -185,7 +185,7 @@ paths:
                   $ref: "#/components/schemas/ExamWithStats"
     post:
       operationId: createExam
-      tags: [teachers]
+      tags: [staff]
       summary: Create new exam
       requestBody:
         required: true
@@ -204,7 +204,7 @@ paths:
   /teacher/exams/{examId}:
     get:
       operationId: getTeacherExam
-      tags: [teachers]
+      tags: [staff]
       summary: Get exam details
       parameters:
         - name: examId
@@ -221,7 +221,7 @@ paths:
                 $ref: "#/components/schemas/ExamWithQuestions"
     put:
       operationId: updateExam
-      tags: [teachers]
+      tags: [staff]
       summary: Update exam
       parameters:
         - name: examId
@@ -244,7 +244,7 @@ paths:
                 $ref: "#/components/schemas/Exam"
     delete:
       operationId: deleteExam
-      tags: [teachers]
+      tags: [staff]
       summary: Delete exam
       parameters:
         - name: examId
@@ -380,8 +380,8 @@ paths:
   /teacher/dashboard:
     get:
       operationId: getTeacherDashboard
-      tags: [teachers]
-      summary: Get teacher dashboard summary
+      tags: [staff]
+      summary: Get staff dashboard summary
       responses:
         "200":
           description: Dashboard stats
@@ -494,62 +494,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
-  /admin/teachers:
+  /admin/staff:
     get:
-      operationId: getAdminTeachers
+      operationId: getAdminStaff
       tags: [admin]
-      summary: List all teachers
+      summary: List all staff
       responses:
         "200":
-          description: List of teachers
+          description: List of staff
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TeacherRecord"
+                  $ref: "#/components/schemas/StaffRecord"
     post:
-      operationId: createAdminTeacher
+      operationId: createAdminStaff
       tags: [admin]
-      summary: Create a new teacher
+      summary: Create a new staff member
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTeacherBody"
+              $ref: "#/components/schemas/CreateStaffBody"
       responses:
         "201":
-          description: Teacher created
+          description: Staff created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeacherRecord"
+                $ref: "#/components/schemas/StaffRecord"
 
-  /admin/teachers/{teacherId}:
+  /admin/staff/{staffId}:
     get:
-      operationId: getAdminTeacher
+      operationId: getAdminStaffMember
       tags: [admin]
-      summary: Get a teacher by ID
+      summary: Get a staff member by ID
       parameters:
-        - name: teacherId
+        - name: staffId
           in: path
           required: true
           schema:
             type: string
       responses:
         "200":
-          description: Teacher record
+          description: Staff record
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeacherRecord"
+                $ref: "#/components/schemas/StaffRecord"
     put:
-      operationId: updateAdminTeacher
+      operationId: updateAdminStaffMember
       tags: [admin]
-      summary: Update a teacher
+      summary: Update a staff member
       parameters:
-        - name: teacherId
+        - name: staffId
           in: path
           required: true
           schema:
@@ -559,27 +559,61 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTeacherBody"
+              $ref: "#/components/schemas/UpdateStaffBody"
       responses:
         "200":
-          description: Teacher updated
+          description: Staff updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeacherRecord"
+                $ref: "#/components/schemas/StaffRecord"
     delete:
-      operationId: deleteAdminTeacher
+      operationId: deleteAdminStaffMember
       tags: [admin]
-      summary: Delete a teacher
+      summary: Delete a staff member
       parameters:
-        - name: teacherId
+        - name: staffId
           in: path
           required: true
           schema:
             type: string
       responses:
         "200":
-          description: Teacher deleted
+          description: Staff deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/exams:
+    get:
+      operationId: getAdminExams
+      tags: [admin]
+      summary: List all exams across all staff
+      responses:
+        "200":
+          description: List of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamWithStats"
+
+  /admin/exams/{examId}:
+    delete:
+      operationId: deleteAdminExam
+      tags: [admin]
+      summary: Delete any exam
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exam deleted
           content:
             application/json:
               schema:
@@ -610,6 +644,17 @@ components:
           type: string
       required: [success, message]
 
+    StaffPermissions:
+      type: object
+      properties:
+        manage_exams:
+          type: boolean
+        view_all_results:
+          type: boolean
+        manage_students:
+          type: boolean
+      required: [manage_exams, view_all_results, manage_students]
+
     LoginBody:
       type: object
       properties:
@@ -619,7 +664,7 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher, admin]
+          enum: [student, staff]
       required: [username, password, role]
 
     LoginResponse:
@@ -629,13 +674,20 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher, admin]
+          enum: [student, staff, admin]
         name:
           type: string
+          nullable: true
         isDefaultPassword:
           type: boolean
         id:
           type: string
+        staffRole:
+          type: string
+          nullable: true
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
+          nullable: true
       required: [token, role, name, isDefaultPassword, id]
 
     ChangePasswordBody:
@@ -656,12 +708,18 @@ components:
           type: string
         role:
           type: string
-          enum: [student, teacher, admin]
+          enum: [student, staff, admin]
         class:
           type: string
           nullable: true
         isDefaultPassword:
           type: boolean
+        staffRole:
+          type: string
+          nullable: true
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
+          nullable: true
       required: [id, name, role, isDefaultPassword]
 
     StudentRecord:
@@ -677,16 +735,20 @@ components:
           type: boolean
       required: [regNumber, name, class, isDefaultPassword]
 
-    TeacherRecord:
+    StaffRecord:
       type: object
       properties:
-        teacherId:
+        staffId:
           type: string
         name:
           type: string
         subject:
           type: string
-      required: [teacherId, name, subject]
+        staffRole:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
+      required: [staffId, name, subject, staffRole, permissions]
 
     CreateStudentBody:
       type: object
@@ -715,43 +777,51 @@ components:
           type: boolean
       required: [name, class]
 
-    CreateTeacherBody:
+    CreateStaffBody:
       type: object
       properties:
-        teacherId:
+        staffId:
           type: string
         name:
           type: string
         subject:
           type: string
+        staffRole:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
         password:
           type: string
-      required: [teacherId, name, subject, password]
+      required: [staffId, name, subject, staffRole, permissions, password]
 
-    UpdateTeacherBody:
+    UpdateStaffBody:
       type: object
       properties:
         name:
           type: string
         subject:
           type: string
+        staffRole:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
         password:
           type: string
           nullable: true
-      required: [name, subject]
+      required: [name, subject, staffRole, permissions]
 
     AdminStats:
       type: object
       properties:
         totalStudents:
           type: integer
-        totalTeachers:
+        totalStaff:
           type: integer
         totalExams:
           type: integer
         totalResults:
           type: integer
-      required: [totalStudents, totalTeachers, totalExams, totalResults]
+      required: [totalStudents, totalStaff, totalExams, totalResults]
 
     Exam:
       type: object

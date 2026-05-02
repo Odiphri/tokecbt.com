@@ -5,10 +5,13 @@
  * Toke Schools CBT Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { StaffPermissions } from "./staffPermissions";
 
-export interface CreateTeacherBody {
-  teacherId: string;
+export interface CreateStaffBody {
+  staffId: string;
   name: string;
   subject: string;
+  staffRole: string;
+  permissions: StaffPermissions;
   password: string;
 }

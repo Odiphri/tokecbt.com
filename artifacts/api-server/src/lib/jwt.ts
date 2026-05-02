@@ -1,12 +1,15 @@
 import jwt from "jsonwebtoken";
+import type { StaffPermissions } from "@workspace/db";
 
 const JWT_SECRET = process.env.SESSION_SECRET ?? "toke-schools-secret";
 const JWT_EXPIRES_IN = "30m";
 
 export interface JwtPayload {
   id: string;
-  role: "student" | "teacher" | "admin";
+  role: "student" | "staff" | "admin";
   name: string;
+  staffRole?: string;
+  permissions?: StaffPermissions;
 }
 
 export function signToken(payload: JwtPayload): string {

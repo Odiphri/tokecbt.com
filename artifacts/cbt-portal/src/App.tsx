@@ -12,14 +12,14 @@ import ChangePassword from "@/pages/change-password";
 import StudentDashboard from "@/pages/student/dashboard";
 import StudentExam from "@/pages/student/exam";
 import StudentResults from "@/pages/student/results";
-import TeacherDashboard from "@/pages/teacher/dashboard";
-import TeacherExams from "@/pages/teacher/exams";
+import StaffDashboard from "@/pages/teacher/dashboard";
+import StaffExams from "@/pages/teacher/exams";
 import ExamForm from "@/pages/teacher/exam-form";
 import ExamDetail from "@/pages/teacher/exam-detail";
 import ExamResults from "@/pages/teacher/exam-results";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
-import AdminTeachers from "@/pages/admin/teachers";
+import AdminStaff from "@/pages/admin/staff";
 
 const queryClient = new QueryClient();
 
@@ -28,24 +28,24 @@ function Router() {
     <Switch>
       <Route path="/" component={Login} />
       <Route path="/change-password" component={ChangePassword} />
-      
+
       {/* Student Routes */}
       <ProtectedRoute path="/student/dashboard" role="student" component={StudentDashboard} />
       <ProtectedRoute path="/student/exam/:examId" role="student" component={StudentExam} />
       <ProtectedRoute path="/student/results" role="student" component={StudentResults} />
 
-      {/* Teacher Routes */}
-      <ProtectedRoute path="/teacher/dashboard" role="teacher" component={TeacherDashboard} />
-      <ProtectedRoute path="/teacher/exams" role="teacher" component={TeacherExams} />
-      <ProtectedRoute path="/teacher/exams/new" role="teacher" component={ExamForm} />
-      <ProtectedRoute path="/teacher/exams/:examId" role="teacher" component={ExamDetail} />
-      <ProtectedRoute path="/teacher/exams/:examId/edit" role="teacher" component={ExamForm} />
-      <ProtectedRoute path="/teacher/exams/:examId/results" role="teacher" component={ExamResults} />
+      {/* Staff Routes */}
+      <ProtectedRoute path="/teacher/dashboard" role="staff" component={StaffDashboard} />
+      <ProtectedRoute path="/teacher/exams" role="staff" component={StaffExams} />
+      <ProtectedRoute path="/teacher/exams/new" role="staff" component={ExamForm} />
+      <ProtectedRoute path="/teacher/exams/:examId" role="staff" component={ExamDetail} />
+      <ProtectedRoute path="/teacher/exams/:examId/edit" role="staff" component={ExamForm} />
+      <ProtectedRoute path="/teacher/exams/:examId/results" role="staff" component={ExamResults} />
 
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />
       <ProtectedRoute path="/admin/students" role="admin" component={AdminStudents} />
-      <ProtectedRoute path="/admin/teachers" role="admin" component={AdminTeachers} />
+      <ProtectedRoute path="/admin/staff" role="admin" component={AdminStaff} />
 
       <Route component={NotFound} />
     </Switch>

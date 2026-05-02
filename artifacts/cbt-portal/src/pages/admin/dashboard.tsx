@@ -19,7 +19,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage students, teachers and view system stats</p>
+        <p className="text-muted-foreground">Manage students, staff and view system stats</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -35,11 +35,11 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalTeachers ?? 0}</div>
+            <div className="text-3xl font-bold">{stats?.totalStaff ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -84,13 +84,13 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Teacher Management
+              Staff Management
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">Add, edit, or remove teacher accounts and their subject assignments.</p>
+            <p className="text-sm text-muted-foreground">Add, edit, or remove staff accounts. Assign roles and manage permissions.</p>
             <Button asChild className="w-full bg-rose-700 hover:bg-rose-800">
-              <Link href="/admin/teachers">Manage Teachers</Link>
+              <Link href="/admin/staff">Manage Staff</Link>
             </Button>
           </CardContent>
         </Card>

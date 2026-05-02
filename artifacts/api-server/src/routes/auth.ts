@@ -48,59 +48,65 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  if (role === "teacher") {
+  if (role === "staff") {
+    // Check teachers first
     const [teacher] = await db
       .select()
       .from(teachersTable)
       .where(eq(teachersTable.teacherId, username));
 
-    if (!teacher) {
-      res.status(401).json({ error: "Invalid credentials" });
+    if (teacher) {
+      const valid = await bcrypt.compare(password, teacher.passwordHash);
+      if (!valid) {
+        res.status(401).json({ error: "Invalid credentials" });
+        return;
+      }
+
+      const permissions = teacher.permissions ?? { manage_exams: true, view_all_results: false, manage_students: false };
+      const token = signToken({
+        id: teacher.teacherId,
+        role: "staff",
+        name: teacher.name,
+        staffRole: teacher.staffRole,
+        permissions,
+      });
+      res.json({
+        token,
+        role: "staff",
+        name: teacher.name,
+        isDefaultPassword: false,
+        id: teacher.teacherId,
+        staffRole: teacher.staffRole,
+        permissions,
+      });
       return;
     }
 
-    const valid = await bcrypt.compare(password, teacher.passwordHash);
-    if (!valid) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const token = signToken({ id: teacher.teacherId, role: "teacher", name: teacher.name });
-    res.json({
-      token,
-      role: "teacher",
-      name: teacher.name,
-      isDefaultPassword: false,
-      id: teacher.teacherId,
-    });
-    return;
-  }
-
-  if (role === "admin") {
+    // If not found in teachers, check admins
     const [admin] = await db
       .select()
       .from(adminsTable)
       .where(eq(adminsTable.username, username));
 
-    if (!admin) {
-      res.status(401).json({ error: "Invalid credentials" });
+    if (admin) {
+      const valid = await bcrypt.compare(password, admin.passwordHash);
+      if (!valid) {
+        res.status(401).json({ error: "Invalid credentials" });
+        return;
+      }
+
+      const token = signToken({ id: admin.username, role: "admin", name: admin.name });
+      res.json({
+        token,
+        role: "admin",
+        name: admin.name,
+        isDefaultPassword: false,
+        id: admin.username,
+      });
       return;
     }
 
-    const valid = await bcrypt.compare(password, admin.passwordHash);
-    if (!valid) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const token = signToken({ id: admin.username, role: "admin", name: admin.name });
-    res.json({
-      token,
-      role: "admin",
-      name: admin.name,
-      isDefaultPassword: false,
-      id: admin.username,
-    });
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
@@ -144,7 +150,7 @@ router.post("/auth/change-password", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  res.status(403).json({ error: "Teachers cannot change passwords via this endpoint" });
+  res.status(403).json({ error: "Only students can change passwords via this endpoint" });
 });
 
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
@@ -171,7 +177,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  if (user.role === "teacher") {
+  if (user.role === "staff") {
     const [teacher] = await db
       .select()
       .from(teachersTable)
@@ -185,9 +191,11 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     res.json({
       id: teacher.teacherId,
       name: teacher.name,
-      role: "teacher",
+      role: "staff",
       class: null,
       isDefaultPassword: false,
+      staffRole: teacher.staffRole,
+      permissions: teacher.permissions,
     });
     return;
   }
