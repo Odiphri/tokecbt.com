@@ -403,6 +403,19 @@ export const DeleteQuestionResponse = zod.object({
 });
 
 /**
+ * @summary Remove a student's result from an exam, making it available to retake
+ */
+export const DeleteExamResultParams = zod.object({
+  examId: zod.coerce.number(),
+  resultId: zod.coerce.number(),
+});
+
+export const DeleteExamResultResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
  * @summary Get all student results for an exam
  */
 export const GetExamResultsParams = zod.object({

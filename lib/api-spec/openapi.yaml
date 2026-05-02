@@ -459,6 +459,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /teacher/exams/{examId}/results/{resultId}:
+    delete:
+      operationId: deleteExamResult
+      tags: [staff]
+      summary: Remove a student's result from an exam, making it available to retake
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: resultId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Result removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /teacher/exams/{examId}/results:
     get:
       operationId: getExamResults

@@ -1,21 +1,42 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetTeacherExam, useGetExamResults } from "@workspace/api-client-react";
+import { useGetTeacherExam, useGetExamResults, useDeleteExamResult, getGetExamResultsQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Download } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, ArrowLeft, Download, UserX } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ExamResults() {
   const { examId } = useParams();
   const id = parseInt(examId!, 10);
-  
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
   const { data: exam, isLoading: isExamLoading } = useGetTeacherExam(id);
   const { data: results, isLoading: isResultsLoading } = useGetExamResults(id);
+  const deleteMutation = useDeleteExamResult();
+
+  const [removeTarget, setRemoveTarget] = useState<{ resultId: number; studentName: string } | null>(null);
+
+  const canManage = user?.role === "admin" || !!user?.permissions?.manage_exams || !!user?.permissions?.view_all_exams;
 
   const exportCSV = () => {
     if (!results || results.length === 0) return;
-
     const headers = ["Reg Number", "Name", "Class", "Score", "Total", "Percentage", "Grade", "Submitted At"];
     const csvContent = [
       headers.join(","),
@@ -30,8 +51,7 @@ export default function ExamResults() {
         `"${format(new Date(r.submittedAt), "yyyy-MM-dd HH:mm:ss")}"`
       ].join(","))
     ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -40,6 +60,19 @@ export default function ExamResults() {
     link.click();
     document.body.removeChild(link);
   };
+
+  function handleRemove() {
+    if (!removeTarget) return;
+    deleteMutation.mutate({ examId: id, resultId: removeTarget.resultId }, {
+      onSuccess: () => {
+        toast({ title: "Result removed", description: `${removeTarget.studentName} can now retake this exam.` });
+        qc.invalidateQueries({ queryKey: getGetExamResultsQueryKey(id) });
+        setRemoveTarget(null);
+      },
+      onError: (e: any) =>
+        toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to remove result" }),
+    });
+  }
 
   if (isExamLoading || isResultsLoading) {
     return (
@@ -74,7 +107,10 @@ export default function ExamResults() {
       <Card>
         <CardHeader>
           <CardTitle>Student Performances</CardTitle>
-          <CardDescription>All students who have completed this exam.</CardDescription>
+          <CardDescription>
+            All students who have completed this exam.
+            {canManage && " Use the remove button to let a student retake the exam."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {!results?.length ? (
@@ -92,6 +128,7 @@ export default function ExamResults() {
                   <TableHead>Percentage</TableHead>
                   <TableHead>Grade</TableHead>
                   <TableHead>Submitted At</TableHead>
+                  {canManage && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -104,16 +141,29 @@ export default function ExamResults() {
                     <TableCell>{result.percentage.toFixed(1)}%</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${
-                        result.grade === 'A' ? 'bg-green-100 text-green-800' :
-                        result.grade === 'B' ? 'bg-blue-100 text-blue-800' :
-                        result.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                        result.grade === 'D' ? 'bg-orange-100 text-orange-800' :
-                        'bg-red-100 text-red-800'
+                        result.grade === "A" ? "bg-green-100 text-green-800" :
+                        result.grade === "B" ? "bg-blue-100 text-blue-800" :
+                        result.grade === "C" ? "bg-yellow-100 text-yellow-800" :
+                        result.grade === "D" ? "bg-orange-100 text-orange-800" :
+                        "bg-red-100 text-red-800"
                       }`}>
                         {result.grade}
                       </span>
                     </TableCell>
                     <TableCell>{format(new Date(result.submittedAt), "MMM d, yyyy HH:mm")}</TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setRemoveTarget({ resultId: result.id, studentName: result.studentName })}
+                        >
+                          <UserX className="h-4 w-4 mr-1" />
+                          Remove
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -121,6 +171,28 @@ export default function ExamResults() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!removeTarget} onOpenChange={v => { if (!v) setRemoveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Result?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete <strong>{removeTarget?.studentName}</strong>'s result for this exam. They will be able to take the exam again as if for the first time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleRemove}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove Result
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

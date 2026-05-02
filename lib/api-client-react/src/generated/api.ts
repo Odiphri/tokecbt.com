@@ -1878,6 +1878,94 @@ export const useDeleteQuestion = <
 };
 
 /**
+ * @summary Remove a student's result from an exam, making it available to retake
+ */
+export const getDeleteExamResultUrl = (examId: number, resultId: number) => {
+  return `/api/teacher/exams/${examId}/results/${resultId}`;
+};
+
+export const deleteExamResult = async (
+  examId: number,
+  resultId: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(
+    getDeleteExamResultUrl(examId, resultId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteExamResultMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteExamResult>>,
+    TError,
+    { examId: number; resultId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteExamResult>>,
+  TError,
+  { examId: number; resultId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteExamResult"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteExamResult>>,
+    { examId: number; resultId: number }
+  > = (props) => {
+    const { examId, resultId } = props ?? {};
+
+    return deleteExamResult(examId, resultId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteExamResultMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteExamResult>>
+>;
+
+export type DeleteExamResultMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a student's result from an exam, making it available to retake
+ */
+export const useDeleteExamResult = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteExamResult>>,
+    TError,
+    { examId: number; resultId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteExamResult>>,
+  TError,
+  { examId: number; resultId: number },
+  TContext
+> => {
+  return useMutation(getDeleteExamResultMutationOptions(options));
+};
+
+/**
  * @summary Get all student results for an exam
  */
 export const getGetExamResultsUrl = (examId: number) => {

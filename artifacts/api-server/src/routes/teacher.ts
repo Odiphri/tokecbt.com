@@ -598,6 +598,37 @@ router.delete("/teacher/exams/:examId/questions/:questionId", async (req, res): 
   res.json({ success: true, message: "Question deleted" });
 });
 
+router.delete("/teacher/exams/:examId/results/:resultId", async (req, res): Promise<void> => {
+  const user = req.user!;
+  const viewAll = canViewAll(user);
+  const examId = parseInt(req.params.examId, 10);
+  const resultId = parseInt(req.params.resultId, 10);
+
+  if (isNaN(examId) || isNaN(resultId)) {
+    res.status(400).json({ error: "Invalid exam or result ID" });
+    return;
+  }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to remove results" });
+    return;
+  }
+
+  const condition = viewAll
+    ? eq(examsTable.id, examId)
+    : and(eq(examsTable.id, examId), eq(examsTable.createdBy, user.id));
+
+  const [exam] = await db.select().from(examsTable).where(condition);
+  if (!exam) { res.status(404).json({ error: "Exam not found" }); return; }
+
+  const [result] = await db.select().from(resultsTable)
+    .where(and(eq(resultsTable.id, resultId), eq(resultsTable.examId, examId)));
+  if (!result) { res.status(404).json({ error: "Result not found" }); return; }
+
+  await db.delete(resultsTable).where(eq(resultsTable.id, resultId));
+  res.json({ success: true, message: "Result removed — student may retake the exam" });
+});
+
 router.get("/teacher/exams/:examId/results", async (req, res): Promise<void> => {
   const user = req.user!;
   const viewAll = canViewAll(user);
