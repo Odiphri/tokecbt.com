@@ -15,5 +15,6 @@ export interface Exam {
   endTime?: string | null;
   createdBy: string;
   questionCount: number;
-  resultsEnabled: boolean;
+  alreadySubmitted?: boolean | null;
+  resultsEnabled?: boolean | null;
 }

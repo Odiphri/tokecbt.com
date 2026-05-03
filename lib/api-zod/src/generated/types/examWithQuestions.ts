@@ -15,5 +15,6 @@ export interface ExamWithQuestions {
   startTime?: string | null;
   endTime?: string | null;
   createdBy: string;
+  resultsEnabled?: boolean | null;
   questions: Question[];
 }

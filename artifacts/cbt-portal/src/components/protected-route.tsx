@@ -9,7 +9,7 @@ export function ProtectedRoute({
   path,
 }: {
   component: any;
-  role: "student" | "staff" | "admin";
+  role: "student" | "staff" | "admin" | "any";
   path: string;
 }) {
   const { user, isLoading } = useAuth();
@@ -26,7 +26,7 @@ export function ProtectedRoute({
     return <Redirect to="/" />;
   }
 
-  if (user.role !== role) {
+  if (role !== "any" && user.role !== role) {
     const dest =
       user.role === "student"
         ? "/student/dashboard"
@@ -36,12 +36,15 @@ export function ProtectedRoute({
     return <Redirect to={dest} />;
   }
 
-  if (user.isDefaultPassword && user.role !== "admin" && path !== "/change-password") {
+  // Only force staff to change default password, not students (students choose when to change)
+  if (user.isDefaultPassword && user.role === "staff" && path !== "/change-password") {
     return <Redirect to="/change-password" />;
   }
 
   const Layout =
-    role === "student" ? StudentLayout : role === "staff" ? StaffLayout : AdminLayout;
+    user.role === "student" ? StudentLayout
+    : user.role === "staff" ? StaffLayout
+    : AdminLayout;
 
   return (
     <Route path={path}>

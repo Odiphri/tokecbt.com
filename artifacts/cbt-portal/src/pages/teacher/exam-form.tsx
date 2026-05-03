@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,30 +15,37 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronsUpDown, Check } from "lucide-react";
 import { Link } from "wouter";
 import { CLASS_SECTIONS } from "@/lib/class-sections";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
   subject: z.string().min(1, "Subject is required"),
   class: z.string().min(1, "Class is required"),
   durationMinutes: z.coerce.number().min(1, "Duration must be at least 1 minute"),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
 });
+
+function toLocalDatetimeString(isoString?: string | null) {
+  if (!isoString) return "";
+  // Convert ISO to local datetime-local input format
+  const d = new Date(isoString);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function ExamForm() {
   const { examId } = useParams();
   const isEdit = !!examId && examId !== "new";
   const id = isEdit ? parseInt(examId!, 10) : 0;
+  const [classOpen, setClassOpen] = useState(false);
   
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -57,6 +64,8 @@ export default function ExamForm() {
       subject: "",
       class: "",
       durationMinutes: 60,
+      startTime: "",
+      endTime: "",
     },
   });
 
@@ -66,13 +75,23 @@ export default function ExamForm() {
         subject: exam.subject,
         class: exam.class,
         durationMinutes: exam.durationMinutes,
+        startTime: toLocalDatetimeString(exam.startTime),
+        endTime: toLocalDatetimeString(exam.endTime),
       });
     }
   }, [isEdit, exam, form]);
 
   const onSubmit = (values: z.infer<typeof schema>) => {
+    const data = {
+      subject: values.subject,
+      class: values.class,
+      durationMinutes: values.durationMinutes,
+      startTime: values.startTime ? new Date(values.startTime).toISOString() : null,
+      endTime: values.endTime ? new Date(values.endTime).toISOString() : null,
+    };
+
     if (isEdit) {
-      updateMutation.mutate({ examId: id, data: values }, {
+      updateMutation.mutate({ examId: id, data }, {
         onSuccess: () => {
           toast({ title: "Exam updated successfully" });
           queryClient.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
@@ -83,7 +102,7 @@ export default function ExamForm() {
           toast({ variant: "destructive", title: "Failed to update exam", description: err.data?.error || "Please try again." }),
       });
     } else {
-      createMutation.mutate({ data: values }, {
+      createMutation.mutate({ data }, {
         onSuccess: (data) => {
           toast({ title: "Exam created successfully" });
           queryClient.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
@@ -104,6 +123,8 @@ export default function ExamForm() {
       </div>
     );
   }
+
+  const selectedClass = form.watch("class");
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -147,20 +168,45 @@ export default function ExamForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Class / Section</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a class section" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CLASS_SECTIONS.map(cls => (
-                          <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={classOpen} onOpenChange={setClassOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                          >
+                            {field.value || "Select a class section"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search class..." />
+                          <CommandList>
+                            <CommandEmpty>No class found.</CommandEmpty>
+                            <CommandGroup>
+                              {CLASS_SECTIONS.map((cls) => (
+                                <CommandItem
+                                  key={cls}
+                                  value={cls}
+                                  onSelect={() => {
+                                    field.onChange(cls);
+                                    setClassOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", field.value === cls ? "opacity-100" : "opacity-0")} />
+                                  {cls}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormDescription>
-                      Only students enrolled in this class section will see the exam.
+                      Only students in this class will see the exam.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -180,6 +226,42 @@ export default function ExamForm() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date & Time <span className="text-muted-foreground font-normal text-xs">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Students can't access before this time.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date & Time <span className="text-muted-foreground font-normal text-xs">(optional)</span></FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Exam expires after this time.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="flex justify-end gap-4">
                 <Link href="/teacher/exams">

@@ -6,6 +6,7 @@ export const adminsTable = pgTable("admins", {
   username: text("username").primaryKey(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
+  profilePicture: text("profile_picture"),
 });
 
 export const insertAdminSchema = createInsertSchema(adminsTable);

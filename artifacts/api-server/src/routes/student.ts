@@ -31,6 +31,7 @@ router.get("/student/exams", async (req, res): Promise<void> => {
       endTime: examsTable.endTime,
       createdBy: examsTable.createdBy,
       questionCount: sql<number>`cast(count(${questionsTable.id}) as int)`,
+      resultsEnabled: examsTable.resultsEnabled,
     })
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
@@ -44,11 +45,13 @@ router.get("/student/exams", async (req, res): Promise<void> => {
       .map(r => r.examId)
   );
 
+  const now = new Date();
   const examsWithStatus = exams.map(e => ({
     ...e,
     startTime: e.startTime?.toISOString() ?? null,
     endTime: e.endTime?.toISOString() ?? null,
     alreadySubmitted: submittedExamIds.has(e.id),
+    resultsEnabled: e.resultsEnabled,
   }));
 
   res.json(examsWithStatus);
@@ -82,6 +85,18 @@ router.get("/student/exams/:examId", async (req, res): Promise<void> => {
     return;
   }
 
+  // Enforce startTime - student cannot access exam before it goes live
+  if (exam.startTime && new Date() < exam.startTime) {
+    res.status(403).json({ error: "This exam has not started yet. Please wait until the scheduled start time." });
+    return;
+  }
+
+  // Enforce endTime - student cannot access exam after it has expired
+  if (exam.endTime && new Date() > exam.endTime) {
+    res.status(403).json({ error: "This exam has expired and is no longer available." });
+    return;
+  }
+
   const [existingResult] = await db
     .select()
     .from(resultsTable)
@@ -100,7 +115,10 @@ router.get("/student/exams/:examId", async (req, res): Promise<void> => {
     .from(questionsTable)
     .where(eq(questionsTable.examId, exam.id));
 
-  const safeQuestions = questions.map(q => ({
+  // Shuffle questions for randomization
+  const shuffled = [...questions].sort(() => Math.random() - 0.5);
+
+  const safeQuestions = shuffled.map(q => ({
     id: q.id,
     examId: q.examId,
     questionText: q.questionText,

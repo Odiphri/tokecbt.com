@@ -11,4 +11,6 @@ export interface StudentRecord {
   name: string;
   class: string;
   isDefaultPassword: boolean;
+  studentRole?: string | null;
+  profilePicture?: string | null;
 }

@@ -39,20 +39,21 @@ type StaffPermissions = {
   view_all_exams: boolean;
   view_all_results: boolean;
   manage_students: boolean;
+  reset_student_exam: boolean;
 };
 
 const ROLE_PRESETS: Record<string, { label: string; permissions: StaffPermissions }> = {
   teacher: {
     label: "Teacher",
-    permissions: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false },
+    permissions: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
   },
   hod: {
     label: "HOD",
-    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true },
+    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true },
   },
   librarian: {
     label: "Librarian",
-    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false },
+    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
   },
 };
 
@@ -61,6 +62,7 @@ const EMPTY_PERMISSIONS: StaffPermissions = {
   view_all_exams: false,
   view_all_results: false,
   manage_students: false,
+  reset_student_exam: false,
 };
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, { label: string; description: string }> = {
@@ -79,6 +81,10 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, { label: string; descrip
   manage_students: {
     label: "Manage Students",
     description: "Add, edit and delete student accounts",
+  },
+  reset_student_exam: {
+    label: "Allow Retakes",
+    description: "Delete a student's exam result so they can retake it",
   },
 };
 

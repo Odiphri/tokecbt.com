@@ -35,6 +35,7 @@ export * from "./submitExamBodyAnswers";
 export * from "./successResponse";
 export * from "./teacherDashboard";
 export * from "./toggleExamResultsBody";
+export * from "./updateProfilePictureBody";
 export * from "./updateStaffBody";
 export * from "./updateStudentBody";
 export * from "./userInfo";

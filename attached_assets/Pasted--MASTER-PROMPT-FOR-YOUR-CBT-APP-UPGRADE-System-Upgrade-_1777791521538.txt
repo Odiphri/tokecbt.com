@@ -1,0 +1,244 @@
+🧠 MASTER PROMPT FOR YOUR CBT APP UPGRADE
+
+System Upgrade Requirements: Role & Permission Based CBT Platform
+
+
+---
+
+🔐 1. Role & Permission System (RBAC)
+
+Implement a Role-Based Access Control system where:
+
+Admin can:
+
+Create roles (e.g. Super Admin, Teacher, Staff, Student Leader)
+
+Assign permissions to each role
+
+Assign roles to users
+
+
+Permissions should include:
+
+create_exam
+
+edit_exam
+
+delete_exam
+
+view_all_exams
+
+manage_students
+
+manage_staff
+
+create_admin
+
+reset_student_exam
+
+view_results
+
+control_exam_visibility
+
+
+Staff users should only access features based on assigned permissions.
+
+
+
+---
+
+📝 2. Exam Management Improvements
+
+Add ability for teachers/admins to:
+
+Set exam start date/time (go live time)
+
+Prevent students from accessing exam before the set time
+
+
+Exams should have status:
+
+Upcoming
+
+Live
+
+Expired
+
+
+
+
+---
+
+🔁 3. Retake Exam Feature
+
+If a student has already taken an exam:
+
+Admin/teacher with permission (reset_student_exam) should be able to:
+
+Reset that specific student's exam attempt
+
+Allow the student to retake the exam
+
+
+
+
+
+---
+
+📊 4. Exam Attempt Status (Student View)
+
+For each exam:
+
+If student has NOT taken it → show "New"
+
+If student HAS taken it → show "Attempted"
+
+
+When student clicks:
+
+If result is enabled → show result
+
+If result is NOT enabled → show:
+
+> “Result not enabled”
+
+
+
+Include a Return button
+
+
+
+
+
+---
+
+👁️ 5. Shared Exam Access for Staff
+
+Staff with permission view_all_exams should:
+
+See all created exams
+
+Be able to edit exams (if edit_exam is granted)
+
+
+
+
+---
+
+🔍 6. UI Improvements (Important)
+
+Class dropdown:
+
+Add search bar inside dropdown
+
+Make dropdown scrollable
+
+
+
+
+---
+
+👤 7. User Profile Enhancements
+
+All users (Admin, Staff, Students) should have:
+
+Profile picture upload
+
+Display profile image across dashboard
+
+
+
+
+---
+
+🔑 8. Password Management
+
+Staff:
+
+Can change password anytime from settings
+
+
+Students:
+
+Should NOT be forced to change password on first login
+
+Should have option to change password manually anytime
+
+
+
+
+---
+
+🎓 9. Student Roles (School Structure)
+
+Add extra field for students:
+
+Role/Position (e.g. Head Boy, Head Girl, Prefect, etc.)
+
+
+Admin should be able to assign these roles
+
+
+
+---
+
+⚙️ OPTIONAL (But Smart Additions)
+
+Auto-save answers during exam
+
+Randomize question order
+
+Add “Are you sure you want to submit?” modal
+
+
+
+---
+
+🧩 Implementation Notes
+
+Use relational tables:
+
+roles
+
+permissions
+
+role_permissions
+
+user_roles
+
+
+Exams table should include:
+
+start_time
+
+end_time
+
+result_enabled (boolean)
+
+
+
+
+---
+
+💡 Final Touch
+
+Make sure:
+
+UI is mobile responsive
+
+Permissions are enforced on backend (not just frontend)
+
+
+
+---
+
+🧨 Real Talk
+
+What you just designed here?
+
+That’s not a “small CBT app” anymore.
+
+That’s the skeleton of something that can compete with systems used by schools running exams like WAEC if you polish it well.
+
+
+-

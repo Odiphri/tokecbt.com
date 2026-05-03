@@ -35,7 +35,11 @@ function canManageStudents(user: Express.Request["user"]): boolean {
   return user?.role === "admin" || !!user?.permissions?.manage_students;
 }
 
-// ─── Student management routes (requires manage_students permission) ──────────
+function canResetStudentExam(user: Express.Request["user"]): boolean {
+  return user?.role === "admin" || !!user?.permissions?.reset_student_exam || !!user?.permissions?.manage_exams;
+}
+
+// ─── Student management routes ────────────────────────────────────────────────
 
 router.get("/teacher/students", async (req, res): Promise<void> => {
   if (!canManageStudents(req.user)) {
@@ -49,6 +53,8 @@ router.get("/teacher/students", async (req, res): Promise<void> => {
       name: s.name,
       class: s.class,
       isDefaultPassword: s.isDefaultPassword,
+      studentRole: s.studentRole ?? "Student",
+      profilePicture: s.profilePicture ?? null,
     }))
   );
 });
@@ -71,12 +77,15 @@ router.post("/teacher/students", async (req, res): Promise<void> => {
     class: parsed.data.class,
     passwordHash,
     isDefaultPassword: true,
+    studentRole: parsed.data.studentRole ?? "Student",
   }).returning();
   res.status(201).json({
     regNumber: student.regNumber,
     name: student.name,
     class: student.class,
     isDefaultPassword: student.isDefaultPassword,
+    studentRole: student.studentRole ?? "Student",
+    profilePicture: student.profilePicture ?? null,
   });
 });
 
@@ -91,7 +100,12 @@ router.put("/teacher/students/:regNumber", async (req, res): Promise<void> => {
     return;
   }
   const { regNumber } = req.params;
-  const updates: Record<string, unknown> = { name: parsed.data.name, class: parsed.data.class };
+  const [existing] = await db.select().from(studentsTable).where(eq(studentsTable.regNumber, regNumber));
+  const updates: Record<string, unknown> = {
+    name: parsed.data.name,
+    class: parsed.data.class,
+    studentRole: parsed.data.studentRole ?? existing?.studentRole ?? "Student",
+  };
   if (parsed.data.resetPassword) {
     const bcrypt = await import("bcryptjs");
     updates.passwordHash = await bcrypt.hash("12345", 10);
@@ -103,7 +117,14 @@ router.put("/teacher/students/:regNumber", async (req, res): Promise<void> => {
   }
   const [student] = await db.update(studentsTable).set(updates).where(eq(studentsTable.regNumber, regNumber)).returning();
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
-  res.json({ regNumber: student.regNumber, name: student.name, class: student.class, isDefaultPassword: student.isDefaultPassword });
+  res.json({
+    regNumber: student.regNumber,
+    name: student.name,
+    class: student.class,
+    isDefaultPassword: student.isDefaultPassword,
+    studentRole: student.studentRole ?? "Student",
+    profilePicture: student.profilePicture ?? null,
+  });
 });
 
 router.delete("/teacher/students/:regNumber", async (req, res): Promise<void> => {
@@ -117,7 +138,7 @@ router.delete("/teacher/students/:regNumber", async (req, res): Promise<void> =>
   res.json({ success: true });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 router.get("/teacher/dashboard", async (req, res): Promise<void> => {
   const user = req.user!;
@@ -609,8 +630,8 @@ router.delete("/teacher/exams/:examId/results/:resultId", async (req, res): Prom
     return;
   }
 
-  if (!canManageExams(user) && !viewAll) {
-    res.status(403).json({ error: "You do not have permission to remove results" });
+  if (!canResetStudentExam(user)) {
+    res.status(403).json({ error: "You do not have permission to reset student exams" });
     return;
   }
 

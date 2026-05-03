@@ -67,7 +67,7 @@ paths:
     post:
       operationId: changePassword
       tags: [auth]
-      summary: Change password
+      summary: Change password (works for all roles)
       requestBody:
         required: true
         content:
@@ -94,6 +94,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserInfo"
+
+  /auth/profile-picture:
+    patch:
+      operationId: updateProfilePicture
+      tags: [auth]
+      summary: Update profile picture (base64 data URL)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilePictureBody"
+      responses:
+        "200":
+          description: Profile picture updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /student/exams:
     get:
@@ -291,11 +310,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                enabled:
-                  type: boolean
-              required: [enabled]
+              $ref: "#/components/schemas/ToggleExamResultsBody"
       responses:
         "200":
           description: Results visibility updated
@@ -728,6 +743,29 @@ paths:
                   $ref: "#/components/schemas/ExamWithStats"
 
   /admin/exams/{examId}:
+    put:
+      operationId: updateAdminExam
+      tags: [admin]
+      summary: Update any exam (admin only)
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExamBody"
+      responses:
+        "200":
+          description: Exam updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
     delete:
       operationId: deleteAdminExam
       tags: [admin]
@@ -741,6 +779,51 @@ paths:
       responses:
         "200":
           description: Exam deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/exams/{examId}/results:
+    get:
+      operationId: getAdminExamResults
+      tags: [admin]
+      summary: Get all student results for any exam (admin only)
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResultWithStudent"
+
+  /admin/exams/{examId}/results/{resultId}:
+    delete:
+      operationId: deleteAdminExamResult
+      tags: [admin]
+      summary: Remove a student's result (admin only), allows retake
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: resultId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Result removed
           content:
             application/json:
               schema:
@@ -782,7 +865,9 @@ components:
           type: boolean
         manage_students:
           type: boolean
-      required: [manage_exams, view_all_exams, view_all_results, manage_students]
+        reset_student_exam:
+          type: boolean
+      required: [manage_exams, view_all_exams, view_all_results, manage_students, reset_student_exam]
 
     LoginBody:
       type: object
@@ -828,6 +913,14 @@ components:
           type: string
       required: [currentPassword, newPassword]
 
+    UpdateProfilePictureBody:
+      type: object
+      properties:
+        profilePicture:
+          type: string
+          description: Base64 encoded data URL (e.g. data:image/jpeg;base64,...)
+      required: [profilePicture]
+
     UserInfo:
       type: object
       properties:
@@ -849,6 +942,12 @@ components:
         permissions:
           $ref: "#/components/schemas/StaffPermissions"
           nullable: true
+        profilePicture:
+          type: string
+          nullable: true
+        studentRole:
+          type: string
+          nullable: true
       required: [id, name, role, isDefaultPassword]
 
     StudentRecord:
@@ -862,22 +961,13 @@ components:
           type: string
         isDefaultPassword:
           type: boolean
+        studentRole:
+          type: string
+          nullable: true
+        profilePicture:
+          type: string
+          nullable: true
       required: [regNumber, name, class, isDefaultPassword]
-
-    StaffRecord:
-      type: object
-      properties:
-        staffId:
-          type: string
-        name:
-          type: string
-        subject:
-          type: string
-        staffRole:
-          type: string
-        permissions:
-          $ref: "#/components/schemas/StaffPermissions"
-      required: [staffId, name, subject, staffRole, permissions]
 
     CreateStudentBody:
       type: object
@@ -890,6 +980,9 @@ components:
           type: string
         password:
           type: string
+        studentRole:
+          type: string
+          nullable: true
       required: [regNumber, name, class, password]
 
     UpdateStudentBody:
@@ -904,7 +997,29 @@ components:
           nullable: true
         resetPassword:
           type: boolean
+          nullable: true
+        studentRole:
+          type: string
+          nullable: true
       required: [name, class]
+
+    StaffRecord:
+      type: object
+      properties:
+        staffId:
+          type: string
+        name:
+          type: string
+        subject:
+          type: string
+        staffRole:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/StaffPermissions"
+        profilePicture:
+          type: string
+          nullable: true
+      required: [staffId, name, subject, staffRole, permissions]
 
     CreateStaffBody:
       type: object
@@ -921,7 +1036,7 @@ components:
           $ref: "#/components/schemas/StaffPermissions"
         password:
           type: string
-      required: [staffId, name, subject, staffRole, permissions, password]
+      required: [staffId, name, subject, staffRole, password]
 
     UpdateStaffBody:
       type: object
@@ -973,9 +1088,13 @@ components:
           type: string
         questionCount:
           type: integer
+        alreadySubmitted:
+          type: boolean
+          nullable: true
         resultsEnabled:
           type: boolean
-      required: [id, subject, class, durationMinutes, createdBy, questionCount, resultsEnabled]
+          nullable: true
+      required: [id, subject, class, durationMinutes, createdBy, questionCount]
 
     ExamWithStats:
       type: object
@@ -1048,6 +1167,9 @@ components:
           nullable: true
         createdBy:
           type: string
+        resultsEnabled:
+          type: boolean
+          nullable: true
         questions:
           type: array
           items:
@@ -1180,3 +1302,10 @@ components:
           items:
             $ref: "#/components/schemas/ResultWithStudent"
       required: [totalExams, totalQuestions, totalAttempts, recentResults]
+
+    ToggleExamResultsBody:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]

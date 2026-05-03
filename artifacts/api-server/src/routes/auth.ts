@@ -8,6 +8,7 @@ import {
   LoginBody,
   ChangePasswordBody,
 } from "@workspace/api-zod";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -49,7 +50,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   if (role === "staff") {
-    // Check teachers first
     const [teacher] = await db
       .select()
       .from(teachersTable)
@@ -62,7 +62,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
         return;
       }
 
-      const permissions = teacher.permissions ?? { manage_exams: true, view_all_results: false, manage_students: false };
+      const permissions = teacher.permissions ?? { manage_exams: true, view_all_results: false, manage_students: false, view_all_exams: false, reset_student_exam: false };
       const token = signToken({
         id: teacher.teacherId,
         role: "staff",
@@ -82,7 +82,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       return;
     }
 
-    // If not found in teachers, check admins
     const [admin] = await db
       .select()
       .from(adminsTable)
@@ -150,7 +149,96 @@ router.post("/auth/change-password", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  res.status(403).json({ error: "Only students can change passwords via this endpoint" });
+  if (user.role === "staff") {
+    const [teacher] = await db
+      .select()
+      .from(teachersTable)
+      .where(eq(teachersTable.teacherId, user.id));
+
+    if (!teacher) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(currentPassword, teacher.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db
+      .update(teachersTable)
+      .set({ passwordHash: hash })
+      .where(eq(teachersTable.teacherId, user.id));
+
+    res.json({ success: true, message: "Password changed successfully" });
+    return;
+  }
+
+  if (user.role === "admin") {
+    const [admin] = await db
+      .select()
+      .from(adminsTable)
+      .where(eq(adminsTable.username, user.id));
+
+    if (!admin) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db
+      .update(adminsTable)
+      .set({ passwordHash: hash })
+      .where(eq(adminsTable.username, user.id));
+
+    res.json({ success: true, message: "Password changed successfully" });
+    return;
+  }
+
+  res.status(400).json({ error: "Invalid role" });
+});
+
+const UpdateProfilePictureBody = z.object({
+  profilePicture: z.string().min(1),
+});
+
+router.patch("/auth/profile-picture", requireAuth, async (req, res): Promise<void> => {
+  const parsed = UpdateProfilePictureBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "profilePicture is required" });
+    return;
+  }
+
+  const { profilePicture } = parsed.data;
+  const user = req.user!;
+
+  if (user.role === "student") {
+    await db.update(studentsTable).set({ profilePicture }).where(eq(studentsTable.regNumber, user.id));
+    res.json({ success: true, message: "Profile picture updated" });
+    return;
+  }
+
+  if (user.role === "staff") {
+    await db.update(teachersTable).set({ profilePicture }).where(eq(teachersTable.teacherId, user.id));
+    res.json({ success: true, message: "Profile picture updated" });
+    return;
+  }
+
+  if (user.role === "admin") {
+    await db.update(adminsTable).set({ profilePicture }).where(eq(adminsTable.username, user.id));
+    res.json({ success: true, message: "Profile picture updated" });
+    return;
+  }
+
+  res.status(400).json({ error: "Invalid role" });
 });
 
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
@@ -173,6 +261,8 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       role: "student",
       class: student.class,
       isDefaultPassword: student.isDefaultPassword,
+      studentRole: student.studentRole ?? "Student",
+      profilePicture: student.profilePicture ?? null,
     });
     return;
   }
@@ -196,6 +286,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       isDefaultPassword: false,
       staffRole: teacher.staffRole,
       permissions: teacher.permissions,
+      profilePicture: teacher.profilePicture ?? null,
     });
     return;
   }
@@ -217,6 +308,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       role: "admin",
       class: null,
       isDefaultPassword: false,
+      profilePicture: admin.profilePicture ?? null,
     });
     return;
   }

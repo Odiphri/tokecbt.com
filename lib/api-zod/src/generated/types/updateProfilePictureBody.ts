@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ToggleExamResultsBody {
-  enabled: boolean;
+export interface UpdateProfilePictureBody {
+  /** Base64 encoded data URL (e.g. data:image/jpeg;base64,...) */
+  profilePicture: string;
 }

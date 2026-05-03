@@ -60,9 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (token: string, userData: UserInfo) => {
     localStorage.setItem("cbt_token", token);
     setUser(userData);
-    if (userData.isDefaultPassword && userData.role !== "admin") {
-      setLocation("/change-password");
-    } else if (userData.role === "student") {
+    // No forced redirect for students — they choose when to change password
+    if (userData.role === "student") {
       setLocation("/student/dashboard");
     } else if (userData.role === "staff") {
       setLocation("/teacher/dashboard");

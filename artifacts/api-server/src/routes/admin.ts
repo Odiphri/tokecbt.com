@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, studentsTable, teachersTable, examsTable, resultsTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
-import { eq, sql, desc } from "drizzle-orm";
+import { db, studentsTable, teachersTable, examsTable, resultsTable, questionsTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
+import { eq, sql, desc, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   CreateAdminStudentBody,
@@ -16,6 +16,7 @@ import {
   DeleteAdminStaffMemberParams,
   DeleteAdminExamParams,
 } from "@workspace/api-zod";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -46,6 +47,8 @@ router.get("/admin/students", async (_req, res): Promise<void> => {
     name: s.name,
     class: s.class,
     isDefaultPassword: s.isDefaultPassword,
+    studentRole: s.studentRole ?? "Student",
+    profilePicture: s.profilePicture ?? null,
   })));
 });
 
@@ -69,6 +72,7 @@ router.post("/admin/students", async (req, res): Promise<void> => {
     class: parsed.data.class,
     passwordHash,
     isDefaultPassword: true,
+    studentRole: parsed.data.studentRole ?? "Student",
   }).returning();
 
   res.status(201).json({
@@ -76,6 +80,8 @@ router.post("/admin/students", async (req, res): Promise<void> => {
     name: student.name,
     class: student.class,
     isDefaultPassword: student.isDefaultPassword,
+    studentRole: student.studentRole ?? "Student",
+    profilePicture: student.profilePicture ?? null,
   });
 });
 
@@ -97,6 +103,8 @@ router.get("/admin/students/:regNumber", async (req, res): Promise<void> => {
     name: student.name,
     class: student.class,
     isDefaultPassword: student.isDefaultPassword,
+    studentRole: student.studentRole ?? "Student",
+    profilePicture: student.profilePicture ?? null,
   });
 });
 
@@ -122,6 +130,7 @@ router.put("/admin/students/:regNumber", async (req, res): Promise<void> => {
   const updateValues: Record<string, unknown> = {
     name: body.data.name,
     class: body.data.class,
+    studentRole: body.data.studentRole ?? existing.studentRole ?? "Student",
   };
 
   if (body.data.resetPassword) {
@@ -143,6 +152,8 @@ router.put("/admin/students/:regNumber", async (req, res): Promise<void> => {
     name: student.name,
     class: student.class,
     isDefaultPassword: student.isDefaultPassword,
+    studentRole: student.studentRole ?? "Student",
+    profilePicture: student.profilePicture ?? null,
   });
 });
 
@@ -174,6 +185,7 @@ router.get("/admin/staff", async (_req, res): Promise<void> => {
     subject: t.subject,
     staffRole: t.staffRole,
     permissions: t.permissions,
+    profilePicture: t.profilePicture ?? null,
   })));
 });
 
@@ -208,6 +220,7 @@ router.post("/admin/staff", async (req, res): Promise<void> => {
     subject: staff.subject,
     staffRole: staff.staffRole,
     permissions: staff.permissions,
+    profilePicture: staff.profilePicture ?? null,
   });
 });
 
@@ -230,6 +243,7 @@ router.get("/admin/staff/:staffId", async (req, res): Promise<void> => {
     subject: staff.subject,
     staffRole: staff.staffRole,
     permissions: staff.permissions,
+    profilePicture: staff.profilePicture ?? null,
   });
 });
 
@@ -275,6 +289,7 @@ router.put("/admin/staff/:staffId", async (req, res): Promise<void> => {
     subject: staff.subject,
     staffRole: staff.staffRole,
     permissions: staff.permissions,
+    profilePicture: staff.profilePicture ?? null,
   });
 });
 
@@ -295,7 +310,7 @@ router.delete("/admin/staff/:staffId", async (req, res): Promise<void> => {
   res.json({ success: true, message: "Staff member deleted" });
 });
 
-// ─── Admin Exams (view all exams across all staff) ────────────────────────
+// ─── Admin Exams ──────────────────────────────────────────────────────────────
 
 router.get("/admin/exams", async (_req, res): Promise<void> => {
   const exams = await db
@@ -307,11 +322,13 @@ router.get("/admin/exams", async (_req, res): Promise<void> => {
       startTime: examsTable.startTime,
       endTime: examsTable.endTime,
       createdBy: examsTable.createdBy,
-      questionCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
+      resultsEnabled: examsTable.resultsEnabled,
+      questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
       attemptCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
       averageScore: sql<number | null>`avg(cast(${resultsTable.score} as float) / nullif(${resultsTable.total}, 0) * 100)`,
     })
     .from(examsTable)
+    .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
     .leftJoin(resultsTable, eq(resultsTable.examId, examsTable.id))
     .groupBy(examsTable.id)
     .orderBy(desc(examsTable.createdAt));
@@ -322,6 +339,55 @@ router.get("/admin/exams", async (_req, res): Promise<void> => {
     endTime: e.endTime?.toISOString() ?? null,
     averageScore: e.averageScore != null ? Math.round(Number(e.averageScore) * 100) / 100 : null,
   })));
+});
+
+const UpdateAdminExamBody = z.object({
+  subject: z.string().min(1),
+  class: z.string().min(1),
+  durationMinutes: z.number().int().min(1),
+  startTime: z.string().nullable().optional(),
+  endTime: z.string().nullable().optional(),
+});
+
+router.put("/admin/exams/:examId", async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.examId, 10);
+  if (isNaN(examId)) { res.status(400).json({ error: "Invalid exam ID" }); return; }
+
+  const body = UpdateAdminExamBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!existing) {
+    res.status(404).json({ error: "Exam not found" });
+    return;
+  }
+
+  const [exam] = await db
+    .update(examsTable)
+    .set({
+      subject: body.data.subject,
+      class: body.data.class,
+      durationMinutes: body.data.durationMinutes,
+      startTime: body.data.startTime ? new Date(body.data.startTime) : null,
+      endTime: body.data.endTime ? new Date(body.data.endTime) : null,
+    })
+    .where(eq(examsTable.id, examId))
+    .returning();
+
+  res.json({
+    id: exam.id,
+    subject: exam.subject,
+    class: exam.class,
+    durationMinutes: exam.durationMinutes,
+    startTime: exam.startTime?.toISOString() ?? null,
+    endTime: exam.endTime?.toISOString() ?? null,
+    createdBy: exam.createdBy,
+    questionCount: 0,
+    resultsEnabled: exam.resultsEnabled,
+  });
 });
 
 router.delete("/admin/exams/:examId", async (req, res): Promise<void> => {
@@ -339,6 +405,72 @@ router.delete("/admin/exams/:examId", async (req, res): Promise<void> => {
 
   await db.delete(examsTable).where(eq(examsTable.id, params.data.examId));
   res.json({ success: true, message: "Exam deleted" });
+});
+
+// ─── Admin Exam Results ───────────────────────────────────────────────────────
+
+router.get("/admin/exams/:examId/results", async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.examId, 10);
+  if (isNaN(examId)) { res.status(400).json({ error: "Invalid exam ID" }); return; }
+
+  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!exam) { res.status(404).json({ error: "Exam not found" }); return; }
+
+  const results = await db
+    .select({
+      id: resultsTable.id,
+      studentReg: resultsTable.studentReg,
+      studentName: studentsTable.name,
+      studentClass: studentsTable.class,
+      score: resultsTable.score,
+      total: resultsTable.total,
+      submittedAt: resultsTable.submittedAt,
+    })
+    .from(resultsTable)
+    .innerJoin(studentsTable, eq(studentsTable.regNumber, resultsTable.studentReg))
+    .where(eq(resultsTable.examId, examId))
+    .orderBy(desc(resultsTable.submittedAt));
+
+  res.json(results.map(r => {
+    const percentage = r.total > 0 ? (r.score / r.total) * 100 : 0;
+    const grade =
+      percentage >= 75 ? "A" :
+      percentage >= 60 ? "B" :
+      percentage >= 50 ? "C" :
+      percentage >= 45 ? "D" : "F";
+
+    return {
+      id: r.id,
+      studentReg: r.studentReg,
+      studentName: r.studentName,
+      studentClass: r.studentClass,
+      score: r.score,
+      total: r.total,
+      percentage: Math.round(percentage * 100) / 100,
+      grade,
+      submittedAt: r.submittedAt.toISOString(),
+    };
+  }));
+});
+
+router.delete("/admin/exams/:examId/results/:resultId", async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.examId, 10);
+  const resultId = parseInt(req.params.resultId, 10);
+
+  if (isNaN(examId) || isNaN(resultId)) {
+    res.status(400).json({ error: "Invalid exam or result ID" });
+    return;
+  }
+
+  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!exam) { res.status(404).json({ error: "Exam not found" }); return; }
+
+  const [result] = await db.select().from(resultsTable)
+    .where(and(eq(resultsTable.id, resultId), eq(resultsTable.examId, examId)));
+  if (!result) { res.status(404).json({ error: "Result not found" }); return; }
+
+  await db.delete(resultsTable).where(eq(resultsTable.id, resultId));
+  res.json({ success: true, message: "Result removed — student may retake the exam" });
 });
 
 export default router;

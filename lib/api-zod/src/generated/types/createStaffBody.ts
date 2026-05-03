@@ -12,6 +12,6 @@ export interface CreateStaffBody {
   name: string;
   subject: string;
   staffRole: string;
-  permissions: StaffPermissions;
+  permissions?: StaffPermissions;
   password: string;
 }
