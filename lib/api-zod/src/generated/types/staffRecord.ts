@@ -14,4 +14,5 @@ export interface StaffRecord {
   staffRole: string;
   permissions: StaffPermissions;
   profilePicture?: string | null;
+  assignedClass?: string | null;
 }

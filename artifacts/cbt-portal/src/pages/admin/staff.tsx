@@ -4,6 +4,7 @@ import {
   useCreateAdminStaff,
   useUpdateAdminStaffMember,
   useDeleteAdminStaffMember,
+  useAssignStaffClass,
   getGetAdminStaffQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,7 +16,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap, ArrowLeft, School } from "lucide-react";
+import { CLASS_SECTIONS } from "@/lib/class-sections";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -112,6 +121,7 @@ type StaffItem = {
   subject: string;
   staffRole: string;
   permissions: StaffPermissions;
+  assignedClass?: string | null;
 };
 
 function PermissionsEditor({
@@ -190,9 +200,12 @@ export default function AdminStaff() {
   const updateMutation = useUpdateAdminStaffMember();
   const deleteMutation = useDeleteAdminStaffMember();
 
+  const assignClassMutation = useAssignStaffClass();
   const [showAdd, setShowAdd] = useState(false);
   const [editStaff, setEditStaff] = useState<StaffItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [assignClassTarget, setAssignClassTarget] = useState<StaffItem | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [search, setSearch] = useState("");
 
   const [addForm, setAddForm] = useState<AddForm>({
@@ -287,6 +300,26 @@ export default function AdminStaff() {
     );
   }
 
+  function handleAssignClass() {
+    if (!assignClassTarget) return;
+    assignClassMutation.mutate(
+      {
+        staffId: assignClassTarget.staffId,
+        data: { assignedClass: selectedClass || null },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: selectedClass ? `Class ${selectedClass} assigned` : "Class assignment cleared" });
+          qc.invalidateQueries({ queryKey: getGetAdminStaffQueryKey() });
+          setAssignClassTarget(null);
+          setSelectedClass("");
+        },
+        onError: (e: any) =>
+          toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to assign class" }),
+      }
+    );
+  }
+
   function handleDelete() {
     if (!deleteTarget) return;
     deleteMutation.mutate(
@@ -358,6 +391,7 @@ export default function AdminStaff() {
                   <TableHead>Subject</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Permissions</TableHead>
+                  <TableHead>Class</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -386,7 +420,28 @@ export default function AdminStaff() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {(member as StaffItem).assignedClass ? (
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            {(member as StaffItem).assignedClass}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => {
+                            setAssignClassTarget(member as StaffItem);
+                            setSelectedClass((member as StaffItem).assignedClass ?? "");
+                          }}
+                          title="Assign class"
+                        >
+                          <School className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openEdit(member as StaffItem)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -543,6 +598,56 @@ export default function AdminStaff() {
             >
               {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Class Dialog */}
+      <Dialog open={!!assignClassTarget} onOpenChange={v => { if (!v) { setAssignClassTarget(null); setSelectedClass(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <School className="h-4 w-4 text-blue-600" />
+              Assign Class Teacher
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Assigning a class makes <strong>{assignClassTarget?.name}</strong> the class teacher for that group. They will be able to promote or demote students within the class.
+            </p>
+            <div className="space-y-2">
+              <Label>Class</Label>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a class..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedClass && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => setSelectedClass("")}
+                >
+                  Clear assignment (remove class teacher role)
+                </button>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAssignClassTarget(null); setSelectedClass(""); }}>Cancel</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleAssignClass}
+              disabled={assignClassMutation.isPending}
+            >
+              {assignClassMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {selectedClass ? "Assign Class" : "Clear Assignment"}
             </Button>
           </DialogFooter>
         </DialogContent>

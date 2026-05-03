@@ -58,6 +58,73 @@ export interface LoginResponse {
   permissions?: StaffPermissions | null;
 }
 
+export interface UpdateNameBody {
+  /** @minLength 2 */
+  name: string;
+}
+
+export type CreateRequestBodyType =
+  (typeof CreateRequestBodyType)[keyof typeof CreateRequestBodyType];
+
+export const CreateRequestBodyType = {
+  name_change: "name_change",
+  role_change: "role_change",
+} as const;
+
+export interface CreateRequestBody {
+  type: CreateRequestBodyType;
+  requestedValue: string;
+}
+
+export type ReviewRequestBodyStatus =
+  (typeof ReviewRequestBodyStatus)[keyof typeof ReviewRequestBodyStatus];
+
+export const ReviewRequestBodyStatus = {
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export interface ReviewRequestBody {
+  status: ReviewRequestBodyStatus;
+  reviewNote?: string | null;
+}
+
+export interface AssignClassBody {
+  assignedClass: string | null;
+}
+
+export type RequestRecordType =
+  (typeof RequestRecordType)[keyof typeof RequestRecordType];
+
+export const RequestRecordType = {
+  name_change: "name_change",
+  role_change: "role_change",
+} as const;
+
+export type RequestRecordStatus =
+  (typeof RequestRecordStatus)[keyof typeof RequestRecordStatus];
+
+export const RequestRecordStatus = {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export interface RequestRecord {
+  id: number;
+  userId: string;
+  userName: string;
+  userClass?: string | null;
+  type: RequestRecordType;
+  currentValue: string;
+  requestedValue: string;
+  status: RequestRecordStatus;
+  reviewedBy?: string | null;
+  reviewNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChangePasswordBody {
   currentPassword: string;
   newPassword: string;
@@ -86,6 +153,7 @@ export interface UserInfo {
   permissions?: StaffPermissions | null;
   profilePicture?: string | null;
   studentRole?: string | null;
+  assignedClass?: string | null;
 }
 
 export interface StudentRecord {
@@ -120,6 +188,7 @@ export interface StaffRecord {
   staffRole: string;
   permissions: StaffPermissions;
   profilePicture?: string | null;
+  assignedClass?: string | null;
 }
 
 export interface CreateStaffBody {

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, studentsTable, teachersTable, examsTable, resultsTable, questionsTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
+import { db, studentsTable, teachersTable, examsTable, resultsTable, questionsTable, requestsTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
@@ -186,6 +186,7 @@ router.get("/admin/staff", async (_req, res): Promise<void> => {
     staffRole: t.staffRole,
     permissions: t.permissions,
     profilePicture: t.profilePicture ?? null,
+    assignedClass: t.assignedClass ?? null,
   })));
 });
 
@@ -221,6 +222,7 @@ router.post("/admin/staff", async (req, res): Promise<void> => {
     staffRole: staff.staffRole,
     permissions: staff.permissions,
     profilePicture: staff.profilePicture ?? null,
+    assignedClass: staff.assignedClass ?? null,
   });
 });
 
@@ -244,6 +246,7 @@ router.get("/admin/staff/:staffId", async (req, res): Promise<void> => {
     staffRole: staff.staffRole,
     permissions: staff.permissions,
     profilePicture: staff.profilePicture ?? null,
+    assignedClass: staff.assignedClass ?? null,
   });
 });
 
@@ -290,6 +293,7 @@ router.put("/admin/staff/:staffId", async (req, res): Promise<void> => {
     staffRole: staff.staffRole,
     permissions: staff.permissions,
     profilePicture: staff.profilePicture ?? null,
+    assignedClass: staff.assignedClass ?? null,
   });
 });
 
@@ -308,6 +312,122 @@ router.delete("/admin/staff/:staffId", async (req, res): Promise<void> => {
 
   await db.delete(teachersTable).where(eq(teachersTable.teacherId, params.data.staffId));
   res.json({ success: true, message: "Staff member deleted" });
+});
+
+// ─── Class Teacher Assignment ─────────────────────────────────────────────────
+
+const AssignClassBody = z.object({
+  assignedClass: z.string().nullable(),
+});
+
+router.patch("/admin/staff/:staffId/assigned-class", async (req, res): Promise<void> => {
+  const { staffId } = req.params;
+  const body = AssignClassBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, staffId));
+  if (!existing) {
+    res.status(404).json({ error: "Staff not found" });
+    return;
+  }
+
+  const [staff] = await db
+    .update(teachersTable)
+    .set({ assignedClass: body.data.assignedClass ?? null })
+    .where(eq(teachersTable.teacherId, staffId))
+    .returning();
+
+  res.json({
+    staffId: staff.teacherId,
+    name: staff.name,
+    subject: staff.subject,
+    staffRole: staff.staffRole,
+    permissions: staff.permissions,
+    profilePicture: staff.profilePicture ?? null,
+    assignedClass: staff.assignedClass ?? null,
+  });
+});
+
+// ─── Requests Management ──────────────────────────────────────────────────────
+
+router.get("/admin/requests", async (_req, res): Promise<void> => {
+  const requests = await db.select().from(requestsTable).orderBy(desc(requestsTable.createdAt));
+  res.json(requests.map(r => ({
+    id: r.id,
+    userId: r.userId,
+    userName: r.userName,
+    userClass: r.userClass ?? null,
+    type: r.type,
+    currentValue: r.currentValue,
+    requestedValue: r.requestedValue,
+    status: r.status,
+    reviewedBy: r.reviewedBy ?? null,
+    reviewNote: r.reviewNote ?? null,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  })));
+});
+
+const ReviewRequestBody = z.object({
+  status: z.enum(["approved", "rejected"]),
+  reviewNote: z.string().nullable().optional(),
+});
+
+router.patch("/admin/requests/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid request ID" }); return; }
+
+  const body = ReviewRequestBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(requestsTable).where(eq(requestsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Request not found" }); return; }
+  if (existing.status !== "pending") {
+    res.status(409).json({ error: "Request has already been reviewed" });
+    return;
+  }
+
+  const reviewer = req.user!;
+
+  if (body.data.status === "approved") {
+    if (existing.type === "name_change") {
+      await db.update(studentsTable).set({ name: existing.requestedValue }).where(eq(studentsTable.regNumber, existing.userId));
+    } else if (existing.type === "role_change") {
+      await db.update(studentsTable).set({ studentRole: existing.requestedValue }).where(eq(studentsTable.regNumber, existing.userId));
+    }
+  }
+
+  const [updated] = await db
+    .update(requestsTable)
+    .set({
+      status: body.data.status,
+      reviewedBy: reviewer.name ?? reviewer.id,
+      reviewNote: body.data.reviewNote ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(requestsTable.id, id))
+    .returning();
+
+  res.json({
+    id: updated.id,
+    userId: updated.userId,
+    userName: updated.userName,
+    userClass: updated.userClass ?? null,
+    type: updated.type,
+    currentValue: updated.currentValue,
+    requestedValue: updated.requestedValue,
+    status: updated.status,
+    reviewedBy: updated.reviewedBy ?? null,
+    reviewNote: updated.reviewNote ?? null,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  });
 });
 
 // ─── Admin Exams ──────────────────────────────────────────────────────────────

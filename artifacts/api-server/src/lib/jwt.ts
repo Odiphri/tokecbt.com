@@ -10,6 +10,7 @@ export interface JwtPayload {
   name: string;
   staffRole?: string;
   permissions?: StaffPermissions;
+  assignedClass?: string | null;
 }
 
 export function signToken(payload: JwtPayload): string {

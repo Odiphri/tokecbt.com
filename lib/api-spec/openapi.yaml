@@ -114,6 +114,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /auth/name:
+    patch:
+      operationId: updateName
+      tags: [auth]
+      summary: Update display name (staff and admin only; students must request)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNameBody"
+      responses:
+        "200":
+          description: Name updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /student/exams:
     get:
       operationId: getStudentExams
@@ -188,6 +207,38 @@ paths:
                 items:
                   $ref: "#/components/schemas/ResultWithExam"
 
+  /student/requests:
+    get:
+      operationId: getMyRequests
+      tags: [students]
+      summary: Get all requests submitted by the logged-in student
+      responses:
+        "200":
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestRecord"
+    post:
+      operationId: createRequest
+      tags: [students]
+      summary: Submit a new request (name change or role change)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestBody"
+      responses:
+        "201":
+          description: Request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestRecord"
+
   /teacher/students:
     get:
       operationId: getTeacherStudents
@@ -215,6 +266,59 @@ paths:
       responses:
         "201":
           description: Student created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+
+  /teacher/class-students:
+    get:
+      operationId: getClassStudents
+      tags: [staff]
+      summary: Get students in the teacher's assigned class (class teacher only)
+      responses:
+        "200":
+          description: List of students in assigned class
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentRecord"
+
+  /teacher/students/{regNumber}/promote:
+    post:
+      operationId: promoteStudent
+      tags: [staff]
+      summary: Promote a student to the next class level
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student promoted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentRecord"
+
+  /teacher/students/{regNumber}/demote:
+    post:
+      operationId: demoteStudent
+      tags: [staff]
+      summary: Demote a student to the previous class level
+      parameters:
+        - name: regNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student demoted
           content:
             application/json:
               schema:
@@ -727,6 +831,71 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /admin/requests:
+    get:
+      operationId: getAdminRequests
+      tags: [admin]
+      summary: List all student requests
+      responses:
+        "200":
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestRecord"
+
+  /admin/requests/{id}:
+    patch:
+      operationId: reviewRequest
+      tags: [admin]
+      summary: Approve or reject a student request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequestBody"
+      responses:
+        "200":
+          description: Request reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestRecord"
+
+  /admin/staff/{staffId}/assigned-class:
+    patch:
+      operationId: assignStaffClass
+      tags: [admin]
+      summary: Assign or unassign a class to a teacher (class teacher role)
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignClassBody"
+      responses:
+        "200":
+          description: Class assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffRecord"
+
   /admin/exams:
     get:
       operationId: getAdminExams
@@ -904,6 +1073,77 @@ components:
           nullable: true
       required: [token, role, name, isDefaultPassword, id]
 
+    UpdateNameBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+      required: [name]
+
+    CreateRequestBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [name_change, role_change]
+        requestedValue:
+          type: string
+      required: [type, requestedValue]
+
+    ReviewRequestBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        reviewNote:
+          type: string
+          nullable: true
+      required: [status]
+
+    AssignClassBody:
+      type: object
+      properties:
+        assignedClass:
+          type: string
+          nullable: true
+      required: [assignedClass]
+
+    RequestRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        userName:
+          type: string
+        userClass:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [name_change, role_change]
+        currentValue:
+          type: string
+        requestedValue:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        reviewedBy:
+          type: string
+          nullable: true
+        reviewNote:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, userName, type, currentValue, requestedValue, status, createdAt, updatedAt]
+
     ChangePasswordBody:
       type: object
       properties:
@@ -946,6 +1186,9 @@ components:
           type: string
           nullable: true
         studentRole:
+          type: string
+          nullable: true
+        assignedClass:
           type: string
           nullable: true
       required: [id, name, role, isDefaultPassword]
@@ -1017,6 +1260,9 @@ components:
         permissions:
           $ref: "#/components/schemas/StaffPermissions"
         profilePicture:
+          type: string
+          nullable: true
+        assignedClass:
           type: string
           nullable: true
       required: [staffId, name, subject, staffRole, permissions]

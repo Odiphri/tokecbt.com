@@ -19,10 +19,12 @@ import ExamForm from "@/pages/teacher/exam-form";
 import ExamDetail from "@/pages/teacher/exam-detail";
 import ExamResults from "@/pages/teacher/exam-results";
 import StaffStudents from "@/pages/teacher/students";
+import TeacherClass from "@/pages/teacher/class";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
 import AdminStaff from "@/pages/admin/staff";
 import AdminExams from "@/pages/admin/exams";
+import AdminRequests from "@/pages/admin/requests";
 
 const queryClient = new QueryClient();
 
@@ -48,12 +50,14 @@ function Router() {
       <ProtectedRoute path="/teacher/exams/:examId/edit" role="staff" component={ExamForm} />
       <ProtectedRoute path="/teacher/exams/:examId/results" role="staff" component={ExamResults} />
       <ProtectedRoute path="/teacher/students" role="staff" component={StaffStudents} />
+      <ProtectedRoute path="/teacher/class" role="staff" component={TeacherClass} />
 
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />
       <ProtectedRoute path="/admin/students" role="admin" component={AdminStudents} />
       <ProtectedRoute path="/admin/staff" role="admin" component={AdminStaff} />
       <ProtectedRoute path="/admin/exams" role="admin" component={AdminExams} />
+      <ProtectedRoute path="/admin/requests" role="admin" component={AdminRequests} />
 
       <Route component={NotFound} />
     </Switch>

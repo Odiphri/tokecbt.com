@@ -35,6 +35,7 @@ export const teachersTable = pgTable("teachers", {
   staffRole: text("staff_role").default("teacher").notNull(),
   permissions: jsonb("permissions").$type<StaffPermissions>().default({ manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false }).notNull(),
   profilePicture: text("profile_picture"),
+  assignedClass: text("assigned_class"),
 });
 
 export const insertTeacherSchema = createInsertSchema(teachersTable);

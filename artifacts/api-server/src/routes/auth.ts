@@ -241,6 +241,35 @@ router.patch("/auth/profile-picture", requireAuth, async (req, res): Promise<voi
   res.status(400).json({ error: "Invalid role" });
 });
 
+const UpdateNameBody = z.object({
+  name: z.string().min(2),
+});
+
+router.patch("/auth/name", requireAuth, async (req, res): Promise<void> => {
+  const parsed = UpdateNameBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Name must be at least 2 characters" });
+    return;
+  }
+
+  const { name } = parsed.data;
+  const user = req.user!;
+
+  if (user.role === "staff") {
+    await db.update(teachersTable).set({ name }).where(eq(teachersTable.teacherId, user.id));
+    res.json({ success: true, message: "Name updated successfully" });
+    return;
+  }
+
+  if (user.role === "admin") {
+    await db.update(adminsTable).set({ name }).where(eq(adminsTable.username, user.id));
+    res.json({ success: true, message: "Name updated successfully" });
+    return;
+  }
+
+  res.status(403).json({ error: "Students cannot directly update their name. Please submit a request." });
+});
+
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   const user = req.user!;
 
@@ -287,6 +316,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       staffRole: teacher.staffRole,
       permissions: teacher.permissions,
       profilePicture: teacher.profilePicture ?? null,
+      assignedClass: teacher.assignedClass ?? null,
     });
     return;
   }
