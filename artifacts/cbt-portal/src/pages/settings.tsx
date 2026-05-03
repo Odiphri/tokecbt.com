@@ -18,7 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, Loader2, KeyRound, User } from "lucide-react";
+import { Camera, Loader2, KeyRound, User, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -99,11 +100,23 @@ export default function Settings() {
     );
   }
 
+  const dashboardUrl =
+    user?.role === "student" ? "/student/dashboard"
+    : user?.role === "staff" ? "/teacher/dashboard"
+    : "/admin/dashboard";
+
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your profile and security settings.</p>
+      <div className="flex items-center gap-4">
+        <Link href={dashboardUrl}>
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Settings</h1>
+          <p className="text-muted-foreground mt-1">Manage your profile and security settings.</p>
+        </div>
       </div>
 
       {/* Profile Picture */}

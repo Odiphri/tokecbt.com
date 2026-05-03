@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Users, Eye, Trash2 } from "lucide-react";
+import { Plus, Edit, Users, Eye, Trash2, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -68,15 +68,22 @@ export default function TeacherExams() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">
-            {canViewAll ? "All School Exams" : "My Exams"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {canViewAll
-              ? "Viewing all exams across all staff members."
-              : "Create and manage your computer based tests."}
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href="/teacher/dashboard">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-primary">
+              {canViewAll ? "All School Exams" : "My Exams"}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {canViewAll
+                ? "Viewing all exams across all staff members."
+                : "Create and manage your computer based tests."}
+            </p>
+          </div>
         </div>
         {canManageExams && (
           <Link href="/teacher/exams/new">

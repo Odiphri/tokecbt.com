@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ShieldOff, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ShieldOff, Check, ChevronsUpDown, ArrowLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -219,9 +219,16 @@ function StudentsContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Students</h1>
-          <p className="text-muted-foreground mt-1">Manage student accounts and passwords</p>
+        <div className="flex items-center gap-4">
+          <Link href="/teacher/dashboard">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-primary">Students</h1>
+            <p className="text-muted-foreground mt-1">Manage student accounts and passwords</p>
+          </div>
         </div>
         <Button onClick={() => setShowAdd(true)}>
           <Plus className="mr-2 h-4 w-4" />

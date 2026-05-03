@@ -2,18 +2,27 @@ import { useGetStudentResults } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 export default function StudentResults() {
   const { data: results, isLoading } = useGetStudentResults();
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">My Results</h1>
-        <p className="text-muted-foreground mt-1">Review your past examination performances.</p>
+      <div className="flex items-center gap-4">
+        <Link href="/student/dashboard">
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">My Results</h1>
+          <p className="text-muted-foreground mt-1">Review your past examination performances.</p>
+        </div>
       </div>
 
       <Card>

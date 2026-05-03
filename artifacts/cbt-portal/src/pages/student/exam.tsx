@@ -191,9 +191,18 @@ export default function StudentExam() {
       {/* Header */}
       <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-lg">{exam.subject}</h1>
-            <p className="text-sm opacity-90">Class {exam.class}</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setLocation("/student/dashboard")}
+              className="p-1.5 rounded-md hover:bg-primary-foreground/10 transition-colors opacity-80 hover:opacity-100"
+              title="Back to Dashboard"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="font-bold text-lg">{exam.subject}</h1>
+              <p className="text-sm opacity-90">Class {exam.class}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {lastSaved && (

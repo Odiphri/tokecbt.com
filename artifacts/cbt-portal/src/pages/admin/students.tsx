@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ChevronsUpDown, Check } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ChevronsUpDown, Check, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -180,9 +181,16 @@ export default function AdminStudents() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
-          <p className="text-muted-foreground">Manage student accounts</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/dashboard">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+            <p className="text-muted-foreground">Manage student accounts</p>
+          </div>
         </div>
         <Button className="bg-rose-700 hover:bg-rose-800" onClick={() => setShowAdd(true)}>
           <Plus className="mr-2 h-4 w-4" />

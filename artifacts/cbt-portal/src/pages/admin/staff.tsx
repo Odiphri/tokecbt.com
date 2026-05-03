@@ -15,7 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -305,9 +306,16 @@ export default function AdminStaff() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Staff</h1>
-          <p className="text-muted-foreground">Manage staff accounts, roles and permissions</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/dashboard">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Staff</h1>
+            <p className="text-muted-foreground">Manage staff accounts, roles and permissions</p>
+          </div>
         </div>
         <Button className="bg-rose-700 hover:bg-rose-800" onClick={() => setShowAdd(true)}>
           <Plus className="mr-2 h-4 w-4" />
