@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, X, Users, ChevronDown, ChevronUp, Download, UserX } from "lucide-react";
+import { Loader2, Trash2, X, Users, ChevronDown, ChevronUp, Download, UserX, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,9 +187,16 @@ export default function AdminExams() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">All Exams</h1>
-        <p className="text-muted-foreground">View and manage all exams across all staff.</p>
+      <div className="flex items-center gap-4">
+        <Link href="/admin/dashboard">
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">All Exams</h1>
+          <p className="text-muted-foreground">View and manage all exams across all staff.</p>
+        </div>
       </div>
 
       <Card>
