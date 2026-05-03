@@ -831,6 +831,95 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /roles:
+    get:
+      operationId: getRoles
+      tags: [admin]
+      summary: List all student roles (accessible by any authenticated user)
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleRecord"
+
+  /admin/roles:
+    get:
+      operationId: getAdminRoles
+      tags: [admin]
+      summary: List all roles (admin only)
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleRecord"
+    post:
+      operationId: createRole
+      tags: [admin]
+      summary: Create a new role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoleBody"
+      responses:
+        "201":
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleRecord"
+
+  /admin/roles/{id}:
+    patch:
+      operationId: updateRole
+      tags: [admin]
+      summary: Update a role name
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleBody"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleRecord"
+    delete:
+      operationId: deleteRole
+      tags: [admin]
+      summary: Delete a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /admin/requests:
     get:
       operationId: getAdminRequests
@@ -1036,7 +1125,41 @@ components:
           type: boolean
         reset_student_exam:
           type: boolean
-      required: [manage_exams, view_all_exams, view_all_results, manage_students, reset_student_exam]
+        manage_student_roles:
+          type: boolean
+      required: [manage_exams, view_all_exams, view_all_results, manage_students, reset_student_exam, manage_student_roles]
+
+    RoleRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [prefect, normal, custom]
+        createdBy:
+          type: string
+          nullable: true
+      required: [id, name, type]
+
+    CreateRoleBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [prefect, normal, custom]
+      required: [name, type]
+
+    UpdateRoleBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required: [name]
 
     LoginBody:
       type: object

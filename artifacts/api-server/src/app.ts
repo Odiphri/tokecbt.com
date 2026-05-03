@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { seedRoles } from "./lib/seed-roles";
 
 const app: Express = express();
 
@@ -30,5 +31,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+seedRoles().catch(err => logger.error({ err }, "Failed to seed roles"));
 
 export default app;

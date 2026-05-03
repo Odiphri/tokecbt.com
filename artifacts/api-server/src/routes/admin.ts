@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, studentsTable, teachersTable, examsTable, resultsTable, questionsTable, requestsTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
+import { db, studentsTable, teachersTable, examsTable, resultsTable, questionsTable, requestsTable, rolesTable, DEFAULT_PERMISSIONS_BY_ROLE, DEFAULT_EMPTY_PERMISSIONS } from "@workspace/db";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
@@ -15,6 +15,8 @@ import {
   UpdateAdminStaffMemberParams,
   DeleteAdminStaffMemberParams,
   DeleteAdminExamParams,
+  CreateRoleBody,
+  UpdateRoleBody,
 } from "@workspace/api-zod";
 import { z } from "zod";
 
@@ -591,6 +593,87 @@ router.delete("/admin/exams/:examId/results/:resultId", async (req, res): Promis
 
   await db.delete(resultsTable).where(eq(resultsTable.id, resultId));
   res.json({ success: true, message: "Result removed — student may retake the exam" });
+});
+
+// ─── Public Roles (any authenticated user) ───────────────────────────────────
+
+router.get("/roles", requireAuth, async (_req, res): Promise<void> => {
+  const roles = await db.select().from(rolesTable).orderBy(rolesTable.type, rolesTable.name);
+  res.json(roles.map(r => ({ id: r.id, name: r.name, type: r.type, createdBy: r.createdBy ?? null })));
+});
+
+// ─── Roles (admin) ───────────────────────────────────────────────────────────
+
+function formatRole(r: typeof rolesTable.$inferSelect) {
+  return {
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    createdBy: r.createdBy ?? null,
+  };
+}
+
+router.get("/admin/roles", async (_req, res): Promise<void> => {
+  const roles = await db.select().from(rolesTable).orderBy(rolesTable.type, rolesTable.name);
+  res.json(roles.map(formatRole));
+});
+
+router.post("/admin/roles", async (req, res): Promise<void> => {
+  const parsed = CreateRoleBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const existing = await db.select().from(rolesTable)
+    .where(sql`lower(${rolesTable.name}) = lower(${parsed.data.name})`);
+  if (existing.length > 0) { res.status(409).json({ error: "A role with this name already exists" }); return; }
+
+  const [created] = await db.insert(rolesTable).values({
+    name: parsed.data.name.trim(),
+    type: parsed.data.type,
+    createdBy: req.user?.id ?? null,
+  }).returning();
+
+  res.status(201).json(formatRole(created));
+});
+
+router.patch("/admin/roles/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid role ID" }); return; }
+
+  const parsed = UpdateRoleBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [existing] = await db.select().from(rolesTable).where(eq(rolesTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Role not found" }); return; }
+
+  const duplicate = await db.select().from(rolesTable)
+    .where(sql`lower(${rolesTable.name}) = lower(${parsed.data.name}) and ${rolesTable.id} != ${id}`);
+  if (duplicate.length > 0) { res.status(409).json({ error: "A role with this name already exists" }); return; }
+
+  const [updated] = await db.update(rolesTable)
+    .set({ name: parsed.data.name.trim() })
+    .where(eq(rolesTable.id, id))
+    .returning();
+
+  res.json(formatRole(updated));
+});
+
+router.delete("/admin/roles/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid role ID" }); return; }
+
+  const [existing] = await db.select().from(rolesTable).where(eq(rolesTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Role not found" }); return; }
+
+  const assigned = await db.select({ count: sql<number>`cast(count(*) as int)` })
+    .from(studentsTable)
+    .where(sql`lower(${studentsTable.studentRole}) = lower(${existing.name})`);
+  if ((assigned[0]?.count ?? 0) > 0) {
+    res.status(409).json({ error: `Cannot delete — ${assigned[0]?.count} student(s) currently have this role` });
+    return;
+  }
+
+  await db.delete(rolesTable).where(eq(rolesTable.id, id));
+  res.json({ success: true, message: "Role deleted" });
 });
 
 export default router;

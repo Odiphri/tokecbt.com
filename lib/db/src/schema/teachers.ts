@@ -11,12 +11,13 @@ export interface StaffPermissions {
   view_all_results: boolean;
   manage_students: boolean;
   reset_student_exam: boolean;
+  manage_student_roles: boolean;
 }
 
 export const DEFAULT_PERMISSIONS_BY_ROLE: Record<PresetStaffRole, StaffPermissions> = {
-  teacher: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
-  hod: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true },
-  librarian: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
+  teacher: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false },
+  hod: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true, manage_student_roles: true },
+  librarian: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false },
 };
 
 export const DEFAULT_EMPTY_PERMISSIONS: StaffPermissions = {
@@ -25,6 +26,7 @@ export const DEFAULT_EMPTY_PERMISSIONS: StaffPermissions = {
   view_all_results: false,
   manage_students: false,
   reset_student_exam: false,
+  manage_student_roles: false,
 };
 
 export const teachersTable = pgTable("teachers", {
@@ -33,7 +35,7 @@ export const teachersTable = pgTable("teachers", {
   subject: text("subject").notNull(),
   passwordHash: text("password_hash").notNull(),
   staffRole: text("staff_role").default("teacher").notNull(),
-  permissions: jsonb("permissions").$type<StaffPermissions>().default({ manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false }).notNull(),
+  permissions: jsonb("permissions").$type<StaffPermissions>().default({ manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false }).notNull(),
   profilePicture: text("profile_picture"),
   assignedClass: text("assigned_class"),
 });

@@ -24,6 +24,41 @@ export interface StaffPermissions {
   view_all_results: boolean;
   manage_students: boolean;
   reset_student_exam: boolean;
+  manage_student_roles: boolean;
+}
+
+export type RoleRecordType =
+  (typeof RoleRecordType)[keyof typeof RoleRecordType];
+
+export const RoleRecordType = {
+  prefect: "prefect",
+  normal: "normal",
+  custom: "custom",
+} as const;
+
+export interface RoleRecord {
+  id: number;
+  name: string;
+  type: RoleRecordType;
+  createdBy?: string | null;
+}
+
+export type CreateRoleBodyType =
+  (typeof CreateRoleBodyType)[keyof typeof CreateRoleBodyType];
+
+export const CreateRoleBodyType = {
+  prefect: "prefect",
+  normal: "normal",
+  custom: "custom",
+} as const;
+
+export interface CreateRoleBody {
+  name: string;
+  type: CreateRoleBodyType;
+}
+
+export interface UpdateRoleBody {
+  name: string;
 }
 
 export type LoginBodyRole = (typeof LoginBodyRole)[keyof typeof LoginBodyRole];
