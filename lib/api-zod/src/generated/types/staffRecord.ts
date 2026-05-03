@@ -13,4 +13,5 @@ export interface StaffRecord {
   subject: string;
   staffRole: string;
   permissions: StaffPermissions;
+  profilePicture?: string | null;
 }

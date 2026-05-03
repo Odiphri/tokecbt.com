@@ -4,9 +4,11 @@ import { useGetStudentExam, useSubmitExam } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Clock, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Clock, AlertTriangle, ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+
+const AUTOSAVE_KEY = (examId: number) => `cbt_exam_${examId}_answers`;
 
 export default function StudentExam() {
   const { examId } = useParams();
@@ -28,6 +30,34 @@ export default function StudentExam() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Restore saved answers from localStorage
+  useEffect(() => {
+    if (!id) return;
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY(id));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed === "object" && parsed !== null) {
+          setAnswers(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [id]);
+
+  // Auto-save answers to localStorage whenever answers change
+  useEffect(() => {
+    if (!id || Object.keys(answers).length === 0) return;
+    try {
+      localStorage.setItem(AUTOSAVE_KEY(id), JSON.stringify(answers));
+      setLastSaved(new Date());
+    } catch {
+      // ignore
+    }
+  }, [answers, id]);
 
   // Timer logic
   useEffect(() => {
@@ -49,6 +79,7 @@ export default function StudentExam() {
         title: "Time's up!",
         description: "Your exam is being automatically submitted.",
       });
+      localStorage.removeItem(AUTOSAVE_KEY(id));
       submitExamRef.current({
         examId: id,
         data: { answers: currentAnswersRef.current }
@@ -76,11 +107,14 @@ export default function StudentExam() {
   }
 
   if (error || !exam) {
+    const errMsg = (error as any)?.data?.error || (error as any)?.message || "";
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-bold mb-2">Exam Not Found</h2>
-        <p className="text-muted-foreground mb-4">The requested exam could not be loaded or is not available.</p>
+        <h2 className="text-xl font-bold mb-2">Exam Not Available</h2>
+        <p className="text-muted-foreground mb-4 text-center max-w-md">
+          {errMsg || "The requested exam could not be loaded or is not available."}
+        </p>
         <Button onClick={() => setLocation("/student/dashboard")}>Return to Dashboard</Button>
       </div>
     );
@@ -129,6 +163,7 @@ export default function StudentExam() {
   };
 
   const handleSubmit = () => {
+    localStorage.removeItem(AUTOSAVE_KEY(id));
     submitMutation.mutate({
       examId: id,
       data: { answers }
@@ -160,12 +195,20 @@ export default function StudentExam() {
             <h1 className="font-bold text-lg">{exam.subject}</h1>
             <p className="text-sm opacity-90">Class {exam.class}</p>
           </div>
-          <div className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-full font-mono text-xl font-bold bg-primary-foreground/10 border",
-            isLowTime ? "text-red-400 border-red-400 animate-pulse" : "border-primary-foreground/20"
-          )}>
-            <Clock className="h-5 w-5" />
-            {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
+          <div className="flex items-center gap-3">
+            {lastSaved && (
+              <div className="hidden sm:flex items-center gap-1 text-xs opacity-70">
+                <Save className="h-3 w-3" />
+                <span>Saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+            <div className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-full font-mono text-xl font-bold bg-primary-foreground/10 border",
+              isLowTime ? "text-red-400 border-red-400 animate-pulse" : "border-primary-foreground/20"
+            )}>
+              <Clock className="h-5 w-5" />
+              {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
+            </div>
           </div>
         </div>
       </header>
@@ -185,9 +228,9 @@ export default function StudentExam() {
               </h2>
 
               <div className="space-y-3 mt-auto">
-                {['A', 'B', 'C', 'D'].map((opt) => {
+                {(['A', 'B', 'C', 'D'] as const).map((opt) => {
                   const optionKey = `option${opt}` as keyof typeof currentQuestion;
-                  const isSelected = answers[currentQuestion.id] === opt;
+                  const isSelected = answers[String(currentQuestion.id)] === opt;
                   
                   return (
                     <button
@@ -254,7 +297,7 @@ export default function StudentExam() {
               <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Navigator</h3>
               <div className="grid grid-cols-5 gap-2">
                 {exam.questions.map((q, idx) => {
-                  const isAnswered = !!answers[q.id];
+                  const isAnswered = !!answers[String(q.id)];
                   const isCurrent = idx === currentQuestionIndex;
                   return (
                     <button
@@ -273,7 +316,14 @@ export default function StudentExam() {
                 })}
               </div>
 
-              <div className="mt-8 pt-4 border-t">
+              {lastSaved && (
+                <div className="mt-4 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Save className="h-3 w-3" />
+                  <span>Auto-saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t">
                 <Button 
                   className={cn("w-full", isAllAnswered && "bg-green-700 hover:bg-green-800")} 
                   size="lg"

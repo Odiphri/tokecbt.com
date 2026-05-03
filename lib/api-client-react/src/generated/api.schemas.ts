@@ -23,6 +23,7 @@ export interface StaffPermissions {
   view_all_exams: boolean;
   view_all_results: boolean;
   manage_students: boolean;
+  reset_student_exam: boolean;
 }
 
 export type LoginBodyRole = (typeof LoginBodyRole)[keyof typeof LoginBodyRole];
@@ -62,6 +63,11 @@ export interface ChangePasswordBody {
   newPassword: string;
 }
 
+export interface UpdateProfilePictureBody {
+  /** Base64 encoded data URL (e.g. data:image/jpeg;base64,...) */
+  profilePicture: string;
+}
+
 export type UserInfoRole = (typeof UserInfoRole)[keyof typeof UserInfoRole];
 
 export const UserInfoRole = {
@@ -78,6 +84,8 @@ export interface UserInfo {
   isDefaultPassword: boolean;
   staffRole?: string | null;
   permissions?: StaffPermissions | null;
+  profilePicture?: string | null;
+  studentRole?: string | null;
 }
 
 export interface StudentRecord {
@@ -85,6 +93,24 @@ export interface StudentRecord {
   name: string;
   class: string;
   isDefaultPassword: boolean;
+  studentRole?: string | null;
+  profilePicture?: string | null;
+}
+
+export interface CreateStudentBody {
+  regNumber: string;
+  name: string;
+  class: string;
+  password: string;
+  studentRole?: string | null;
+}
+
+export interface UpdateStudentBody {
+  name: string;
+  class: string;
+  password?: string | null;
+  resetPassword?: boolean | null;
+  studentRole?: string | null;
 }
 
 export interface StaffRecord {
@@ -93,20 +119,7 @@ export interface StaffRecord {
   subject: string;
   staffRole: string;
   permissions: StaffPermissions;
-}
-
-export interface CreateStudentBody {
-  regNumber: string;
-  name: string;
-  class: string;
-  password: string;
-}
-
-export interface UpdateStudentBody {
-  name: string;
-  class: string;
-  password?: string | null;
-  resetPassword?: boolean;
+  profilePicture?: string | null;
 }
 
 export interface CreateStaffBody {
@@ -114,7 +127,7 @@ export interface CreateStaffBody {
   name: string;
   subject: string;
   staffRole: string;
-  permissions: StaffPermissions;
+  permissions?: StaffPermissions;
   password: string;
 }
 
@@ -142,7 +155,8 @@ export interface Exam {
   endTime?: string | null;
   createdBy: string;
   questionCount: number;
-  resultsEnabled: boolean;
+  alreadySubmitted?: boolean | null;
+  resultsEnabled?: boolean | null;
 }
 
 export interface ExamWithStats {
@@ -188,6 +202,7 @@ export interface ExamWithQuestions {
   startTime?: string | null;
   endTime?: string | null;
   createdBy: string;
+  resultsEnabled?: boolean | null;
   questions: Question[];
 }
 
@@ -266,6 +281,6 @@ export interface TeacherDashboard {
   recentResults: ResultWithStudent[];
 }
 
-export type ToggleExamResultsBody = {
+export interface ToggleExamResultsBody {
   enabled: boolean;
-};
+}

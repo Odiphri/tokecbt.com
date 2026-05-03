@@ -10,12 +10,13 @@ export interface StaffPermissions {
   view_all_exams: boolean;
   view_all_results: boolean;
   manage_students: boolean;
+  reset_student_exam: boolean;
 }
 
 export const DEFAULT_PERMISSIONS_BY_ROLE: Record<PresetStaffRole, StaffPermissions> = {
-  teacher: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false },
-  hod: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true },
-  librarian: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false },
+  teacher: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
+  hod: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true },
+  librarian: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false },
 };
 
 export const DEFAULT_EMPTY_PERMISSIONS: StaffPermissions = {
@@ -23,6 +24,7 @@ export const DEFAULT_EMPTY_PERMISSIONS: StaffPermissions = {
   view_all_exams: false,
   view_all_results: false,
   manage_students: false,
+  reset_student_exam: false,
 };
 
 export const teachersTable = pgTable("teachers", {
@@ -31,7 +33,8 @@ export const teachersTable = pgTable("teachers", {
   subject: text("subject").notNull(),
   passwordHash: text("password_hash").notNull(),
   staffRole: text("staff_role").default("teacher").notNull(),
-  permissions: jsonb("permissions").$type<StaffPermissions>().default({ manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false }).notNull(),
+  permissions: jsonb("permissions").$type<StaffPermissions>().default({ manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false }).notNull(),
+  profilePicture: text("profile_picture"),
 });
 
 export const insertTeacherSchema = createInsertSchema(teachersTable);

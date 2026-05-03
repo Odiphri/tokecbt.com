@@ -16,4 +16,6 @@ export interface UserInfo {
   isDefaultPassword: boolean;
   staffRole?: string | null;
   permissions?: StaffPermissions | null;
+  profilePicture?: string | null;
+  studentRole?: string | null;
 }

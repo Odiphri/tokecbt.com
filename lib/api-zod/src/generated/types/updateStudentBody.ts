@@ -10,5 +10,6 @@ export interface UpdateStudentBody {
   name: string;
   class: string;
   password?: string | null;
-  resetPassword?: boolean;
+  resetPassword?: boolean | null;
+  studentRole?: string | null;
 }

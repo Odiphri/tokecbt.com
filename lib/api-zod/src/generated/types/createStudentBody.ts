@@ -11,4 +11,5 @@ export interface CreateStudentBody {
   name: string;
   class: string;
   password: string;
+  studentRole?: string | null;
 }

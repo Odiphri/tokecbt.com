@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 // Pages
 import Login from "@/pages/login";
 import ChangePassword from "@/pages/change-password";
+import Settings from "@/pages/settings";
 import StudentDashboard from "@/pages/student/dashboard";
 import StudentExam from "@/pages/student/exam";
 import StudentResults from "@/pages/student/results";
@@ -21,6 +22,7 @@ import StaffStudents from "@/pages/teacher/students";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
 import AdminStaff from "@/pages/admin/staff";
+import AdminExams from "@/pages/admin/exams";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Login} />
       <Route path="/change-password" component={ChangePassword} />
+
+      {/* Shared Settings Route */}
+      <ProtectedRoute path="/settings" role="any" component={Settings} />
 
       {/* Student Routes */}
       <ProtectedRoute path="/student/dashboard" role="student" component={StudentDashboard} />
@@ -48,6 +53,7 @@ function Router() {
       <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />
       <ProtectedRoute path="/admin/students" role="admin" component={AdminStudents} />
       <ProtectedRoute path="/admin/staff" role="admin" component={AdminStaff} />
+      <ProtectedRoute path="/admin/exams" role="admin" component={AdminExams} />
 
       <Route component={NotFound} />
     </Switch>

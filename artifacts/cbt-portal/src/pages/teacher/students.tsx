@@ -1,23 +1,24 @@
 import { useState } from "react";
-import { useGetTeacherStudents, useCreateTeacherStudent, useUpdateTeacherStudent, useDeleteTeacherStudent } from "@workspace/api-client-react";
+import {
+  useGetTeacherStudents,
+  useCreateTeacherStudent,
+  useUpdateTeacherStudent,
+  useDeleteTeacherStudent,
+  getGetTeacherStudentsQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ShieldOff } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, RotateCcw, X, ShieldOff, Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,9 +37,71 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CLASS_SECTIONS } from "@/lib/class-sections";
+import { STUDENT_POSITIONS } from "@/lib/student-positions";
+import { cn } from "@/lib/utils";
 
-type StudentForm = { regNumber: string; name: string; class: string; password: string };
-type EditForm = { name: string; class: string; newPassword: string; resetPassword: boolean };
+type StudentForm = { regNumber: string; name: string; class: string; password: string; studentRole: string };
+type EditForm = { name: string; class: string; newPassword: string; resetPassword: boolean; studentRole: string };
+
+function SearchableClassSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !value && "text-muted-foreground")}>
+          {value || "Select class section"}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-0">
+        <Command>
+          <CommandInput placeholder="Search class..." />
+          <CommandList>
+            <CommandEmpty>No class found.</CommandEmpty>
+            <CommandGroup>
+              {CLASS_SECTIONS.map(cls => (
+                <CommandItem key={cls} value={cls} onSelect={() => { onChange(cls); setOpen(false); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === cls ? "opacity-100" : "opacity-0")} />
+                  {cls}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SearchablePositionSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !value && "text-muted-foreground")}>
+          {value || "Select position"}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-0">
+        <Command>
+          <CommandInput placeholder="Search position..." />
+          <CommandList>
+            <CommandEmpty>No position found.</CommandEmpty>
+            <CommandGroup>
+              {STUDENT_POSITIONS.map(pos => (
+                <CommandItem key={pos} value={pos} onSelect={() => { onChange(pos); setOpen(false); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === pos ? "opacity-100" : "opacity-0")} />
+                  {pos}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function StaffStudents() {
   const { user } = useAuth();
@@ -71,12 +134,12 @@ function StudentsContent() {
   const deleteMutation = useDeleteTeacherStudent();
 
   const [showAdd, setShowAdd] = useState(false);
-  const [editStudent, setEditStudent] = useState<{ regNumber: string; name: string; class: string } | null>(null);
+  const [editStudent, setEditStudent] = useState<{ regNumber: string; name: string; class: string; studentRole?: string | null } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const [addForm, setAddForm] = useState<StudentForm>({ regNumber: "", name: "", class: "", password: "12345" });
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", class: "", newPassword: "", resetPassword: false });
+  const [addForm, setAddForm] = useState<StudentForm>({ regNumber: "", name: "", class: "", password: "12345", studentRole: "Student" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", class: "", newPassword: "", resetPassword: false, studentRole: "Student" });
 
   const filtered = (students ?? []).filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -84,13 +147,9 @@ function StudentsContent() {
     s.class.toLowerCase().includes(search.toLowerCase())
   );
 
-  function openEdit(student: { regNumber: string; name: string; class: string }) {
+  function openEdit(student: { regNumber: string; name: string; class: string; studentRole?: string | null }) {
     setEditStudent(student);
-    setEditForm({ name: student.name, class: student.class, newPassword: "", resetPassword: false });
-  }
-
-  function invalidate() {
-    qc.invalidateQueries({ queryKey: ["/api/teacher/students"] });
+    setEditForm({ name: student.name, class: student.class, newPassword: "", resetPassword: false, studentRole: student.studentRole ?? "Student" });
   }
 
   function handleAdd() {
@@ -99,13 +158,13 @@ function StudentsContent() {
       return;
     }
     createMutation.mutate(
-      { data: { regNumber: addForm.regNumber, name: addForm.name, class: addForm.class, password: addForm.password } },
+      { data: { regNumber: addForm.regNumber, name: addForm.name, class: addForm.class, password: addForm.password, studentRole: addForm.studentRole } },
       {
         onSuccess: () => {
           toast({ title: "Student created successfully" });
-          invalidate();
+          qc.invalidateQueries({ queryKey: getGetTeacherStudentsQueryKey() });
           setShowAdd(false);
-          setAddForm({ regNumber: "", name: "", class: "", password: "12345" });
+          setAddForm({ regNumber: "", name: "", class: "", password: "12345", studentRole: "Student" });
         },
         onError: (e: any) =>
           toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to create student" }),
@@ -126,12 +185,13 @@ function StudentsContent() {
           class: editForm.class,
           password: editForm.newPassword || undefined,
           resetPassword: editForm.resetPassword,
+          studentRole: editForm.studentRole,
         },
       },
       {
         onSuccess: () => {
           toast({ title: "Student updated successfully" });
-          invalidate();
+          qc.invalidateQueries({ queryKey: getGetTeacherStudentsQueryKey() });
           setEditStudent(null);
         },
         onError: (e: any) =>
@@ -147,7 +207,7 @@ function StudentsContent() {
       {
         onSuccess: () => {
           toast({ title: "Student deleted successfully" });
-          invalidate();
+          qc.invalidateQueries({ queryKey: getGetTeacherStudentsQueryKey() });
           setDeleteTarget(null);
         },
         onError: (e: any) =>
@@ -204,6 +264,7 @@ function StudentsContent() {
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
+                  <TableHead>Position</TableHead>
                   <TableHead>Password Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -215,6 +276,11 @@ function StudentsContent() {
                     <TableCell className="font-medium">{student.name}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono">{student.class}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${student.studentRole && student.studentRole !== "Student" ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground"}`}>
+                        {student.studentRole ?? "Student"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {student.isDefaultPassword ? (
@@ -269,16 +335,11 @@ function StudentsContent() {
             </div>
             <div>
               <Label>Class / Section</Label>
-              <Select value={addForm.class} onValueChange={v => setAddForm(f => ({ ...f, class: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select class section" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLASS_SECTIONS.map(cls => (
-                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableClassSelect value={addForm.class} onChange={v => setAddForm(f => ({ ...f, class: v }))} />
+            </div>
+            <div>
+              <Label>Position / Role</Label>
+              <SearchablePositionSelect value={addForm.studentRole} onChange={v => setAddForm(f => ({ ...f, studentRole: v }))} />
             </div>
             <div>
               <Label>Initial Password</Label>
@@ -312,16 +373,11 @@ function StudentsContent() {
             </div>
             <div>
               <Label>Class / Section</Label>
-              <Select value={editForm.class} onValueChange={v => setEditForm(f => ({ ...f, class: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select class section" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLASS_SECTIONS.map(cls => (
-                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableClassSelect value={editForm.class} onChange={v => setEditForm(f => ({ ...f, class: v }))} />
+            </div>
+            <div>
+              <Label>Position / Role</Label>
+              <SearchablePositionSelect value={editForm.studentRole} onChange={v => setEditForm(f => ({ ...f, studentRole: v }))} />
             </div>
             <div>
               <Label>New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>

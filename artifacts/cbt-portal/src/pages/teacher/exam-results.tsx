@@ -33,7 +33,11 @@ export default function ExamResults() {
 
   const [removeTarget, setRemoveTarget] = useState<{ resultId: number; studentName: string } | null>(null);
 
-  const canManage = user?.role === "admin" || !!user?.permissions?.manage_exams || !!user?.permissions?.view_all_exams;
+  const canResetExam =
+    user?.role === "admin" ||
+    !!user?.permissions?.reset_student_exam ||
+    !!user?.permissions?.manage_exams ||
+    !!user?.permissions?.view_all_exams;
 
   const exportCSV = () => {
     if (!results || results.length === 0) return;
@@ -84,6 +88,10 @@ export default function ExamResults() {
 
   if (!exam) return <div>Exam not found</div>;
 
+  const avgScore = results?.length
+    ? results.reduce((acc, r) => acc + r.percentage, 0) / results.length
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -95,7 +103,10 @@ export default function ExamResults() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-primary">Results: {exam.subject}</h1>
-            <p className="text-muted-foreground mt-1">Class: {exam.class}</p>
+            <p className="text-muted-foreground mt-1">
+              Class: {exam.class}
+              {avgScore != null && ` · Class Average: ${avgScore.toFixed(1)}%`}
+            </p>
           </div>
         </div>
         <Button onClick={exportCSV} disabled={!results?.length}>
@@ -108,8 +119,8 @@ export default function ExamResults() {
         <CardHeader>
           <CardTitle>Student Performances</CardTitle>
           <CardDescription>
-            All students who have completed this exam.
-            {canManage && " Use the remove button to let a student retake the exam."}
+            {results?.length ?? 0} student{results?.length !== 1 ? "s" : ""} have completed this exam.
+            {canResetExam && " Click 'Retake' to let a student redo the exam."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -128,7 +139,7 @@ export default function ExamResults() {
                   <TableHead>Percentage</TableHead>
                   <TableHead>Grade</TableHead>
                   <TableHead>Submitted At</TableHead>
-                  {canManage && <TableHead className="text-right">Actions</TableHead>}
+                  {canResetExam && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -151,7 +162,7 @@ export default function ExamResults() {
                       </span>
                     </TableCell>
                     <TableCell>{format(new Date(result.submittedAt), "MMM d, yyyy HH:mm")}</TableCell>
-                    {canManage && (
+                    {canResetExam && (
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
@@ -160,7 +171,7 @@ export default function ExamResults() {
                           onClick={() => setRemoveTarget({ resultId: result.id, studentName: result.studentName })}
                         >
                           <UserX className="h-4 w-4 mr-1" />
-                          Remove
+                          Allow Retake
                         </Button>
                       </TableCell>
                     )}
@@ -175,7 +186,7 @@ export default function ExamResults() {
       <AlertDialog open={!!removeTarget} onOpenChange={v => { if (!v) setRemoveTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Result?</AlertDialogTitle>
+            <AlertDialogTitle>Allow Retake?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete <strong>{removeTarget?.studentName}</strong>'s result for this exam. They will be able to take the exam again as if for the first time.
             </AlertDialogDescription>
@@ -188,7 +199,7 @@ export default function ExamResults() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove Result
+              Allow Retake
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
