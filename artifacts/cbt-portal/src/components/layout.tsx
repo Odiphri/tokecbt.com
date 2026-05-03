@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, LogOut, FileText, CheckSquare, Users, GraduationCap, Shield, Settings, ClipboardList } from "lucide-react";
+import { BookOpen, LayoutDashboard, LogOut, FileText, CheckSquare, Users, GraduationCap, Shield, Settings, ClipboardList, Inbox, School } from "lucide-react";
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -180,6 +180,16 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                  {(user as any).assignedClass && !user.permissions?.manage_students && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/teacher/class"}>
+                        <Link href="/teacher/class">
+                          <School />
+                          <span>My Class</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/settings"}>
                       <Link href="/settings">
@@ -285,6 +295,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/exams">
                         <ClipboardList />
                         <span>Exams</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/requests")}>
+                      <Link href="/admin/requests">
+                        <Inbox />
+                        <span>Requests</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

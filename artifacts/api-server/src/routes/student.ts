@@ -1,8 +1,10 @@
 import { Router, type IRouter } from "express";
-import { db, studentsTable, examsTable, questionsTable, resultsTable } from "@workspace/db";
+import { db, studentsTable, examsTable, questionsTable, resultsTable, requestsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { SubmitExamBody, GetStudentExamParams, SubmitExamParams } from "@workspace/api-zod";
+import { z } from "zod";
+import { STUDENT_POSITIONS } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -226,6 +228,82 @@ router.post("/student/exams/:examId/submit", async (req, res): Promise<void> => 
     percentage: Math.round(percentage * 100) / 100,
     grade,
     submittedAt: result.submittedAt.toISOString(),
+  });
+});
+
+router.get("/student/requests", async (req, res): Promise<void> => {
+  const user = req.user!;
+  const { desc: descFn } = await import("drizzle-orm");
+  const requests = await db.select().from(requestsTable)
+    .where(eq(requestsTable.userId, user.id))
+    .orderBy(descFn(requestsTable.createdAt));
+  res.json(requests.map(r => ({
+    id: r.id,
+    userId: r.userId,
+    userName: r.userName,
+    userClass: r.userClass ?? null,
+    type: r.type,
+    currentValue: r.currentValue,
+    requestedValue: r.requestedValue,
+    status: r.status,
+    reviewedBy: r.reviewedBy ?? null,
+    reviewNote: r.reviewNote ?? null,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  })));
+});
+
+const CreateRequestBodySchema = z.object({
+  type: z.enum(["name_change", "role_change"]),
+  requestedValue: z.string().min(1),
+});
+
+router.post("/student/requests", async (req, res): Promise<void> => {
+  const user = req.user!;
+  const body = CreateRequestBodySchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.regNumber, user.id));
+  if (!student) {
+    res.status(404).json({ error: "Student not found" });
+    return;
+  }
+
+  if (body.data.type === "role_change") {
+    if (!STUDENT_POSITIONS.includes(body.data.requestedValue as typeof STUDENT_POSITIONS[number])) {
+      res.status(400).json({ error: "Invalid student role" });
+      return;
+    }
+  }
+
+  const currentValue = body.data.type === "name_change" ? student.name : (student.studentRole ?? "Student");
+
+  const [request] = await db.insert(requestsTable).values({
+    userId: student.regNumber,
+    userName: student.name,
+    userClass: student.class,
+    type: body.data.type,
+    currentValue,
+    requestedValue: body.data.requestedValue,
+    status: "pending",
+  }).returning();
+
+  res.status(201).json({
+    id: request.id,
+    userId: request.userId,
+    userName: request.userName,
+    userClass: request.userClass ?? null,
+    type: request.type,
+    currentValue: request.currentValue,
+    requestedValue: request.requestedValue,
+    status: request.status,
+    reviewedBy: request.reviewedBy ?? null,
+    reviewNote: request.reviewNote ?? null,
+    createdAt: request.createdAt.toISOString(),
+    updatedAt: request.updatedAt.toISOString(),
   });
 });
 

@@ -75,6 +75,7 @@ export const GetMeResponse = zod.object({
     .nullish(),
   profilePicture: zod.string().nullish(),
   studentRole: zod.string().nullish(),
+  assignedClass: zod.string().nullish(),
 });
 
 /**
@@ -87,6 +88,20 @@ export const UpdateProfilePictureBody = zod.object({
 });
 
 export const UpdateProfilePictureResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary Update display name (staff and admin only; students must request)
+ */
+export const updateNameBodyNameMin = 2;
+
+export const UpdateNameBody = zod.object({
+  name: zod.string().min(updateNameBodyNameMin),
+});
+
+export const UpdateNameResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
 });
@@ -178,6 +193,33 @@ export const GetStudentResultsResponse = zod.array(
 );
 
 /**
+ * @summary Get all requests submitted by the logged-in student
+ */
+export const GetMyRequestsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  userName: zod.string(),
+  userClass: zod.string().nullish(),
+  type: zod.enum(["name_change", "role_change"]),
+  currentValue: zod.string(),
+  requestedValue: zod.string(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  reviewedBy: zod.string().nullish(),
+  reviewNote: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const GetMyRequestsResponse = zod.array(GetMyRequestsResponseItem);
+
+/**
+ * @summary Submit a new request (name change or role change)
+ */
+export const CreateRequestBody = zod.object({
+  type: zod.enum(["name_change", "role_change"]),
+  requestedValue: zod.string(),
+});
+
+/**
  * @summary List all students (requires manage_students permission)
  */
 export const GetTeacherStudentsResponseItem = zod.object({
@@ -201,6 +243,51 @@ export const CreateTeacherStudentBody = zod.object({
   class: zod.string(),
   password: zod.string(),
   studentRole: zod.string().nullish(),
+});
+
+/**
+ * @summary Get students in the teacher's assigned class (class teacher only)
+ */
+export const GetClassStudentsResponseItem = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+  studentRole: zod.string().nullish(),
+  profilePicture: zod.string().nullish(),
+});
+export const GetClassStudentsResponse = zod.array(GetClassStudentsResponseItem);
+
+/**
+ * @summary Promote a student to the next class level
+ */
+export const PromoteStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const PromoteStudentResponse = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+  studentRole: zod.string().nullish(),
+  profilePicture: zod.string().nullish(),
+});
+
+/**
+ * @summary Demote a student to the previous class level
+ */
+export const DemoteStudentParams = zod.object({
+  regNumber: zod.coerce.string(),
+});
+
+export const DemoteStudentResponse = zod.object({
+  regNumber: zod.string(),
+  name: zod.string(),
+  class: zod.string(),
+  isDefaultPassword: zod.boolean(),
+  studentRole: zod.string().nullish(),
+  profilePicture: zod.string().nullish(),
 });
 
 /**
@@ -588,6 +675,7 @@ export const GetAdminStaffResponseItem = zod.object({
     reset_student_exam: zod.boolean(),
   }),
   profilePicture: zod.string().nullish(),
+  assignedClass: zod.string().nullish(),
 });
 export const GetAdminStaffResponse = zod.array(GetAdminStaffResponseItem);
 
@@ -631,6 +719,7 @@ export const GetAdminStaffMemberResponse = zod.object({
     reset_student_exam: zod.boolean(),
   }),
   profilePicture: zod.string().nullish(),
+  assignedClass: zod.string().nullish(),
 });
 
 /**
@@ -667,6 +756,7 @@ export const UpdateAdminStaffMemberResponse = zod.object({
     reset_student_exam: zod.boolean(),
   }),
   profilePicture: zod.string().nullish(),
+  assignedClass: zod.string().nullish(),
 });
 
 /**
@@ -679,6 +769,79 @@ export const DeleteAdminStaffMemberParams = zod.object({
 export const DeleteAdminStaffMemberResponse = zod.object({
   success: zod.boolean(),
   message: zod.string(),
+});
+
+/**
+ * @summary List all student requests
+ */
+export const GetAdminRequestsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  userName: zod.string(),
+  userClass: zod.string().nullish(),
+  type: zod.enum(["name_change", "role_change"]),
+  currentValue: zod.string(),
+  requestedValue: zod.string(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  reviewedBy: zod.string().nullish(),
+  reviewNote: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const GetAdminRequestsResponse = zod.array(GetAdminRequestsResponseItem);
+
+/**
+ * @summary Approve or reject a student request
+ */
+export const ReviewRequestParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ReviewRequestBody = zod.object({
+  status: zod.enum(["approved", "rejected"]),
+  reviewNote: zod.string().nullish(),
+});
+
+export const ReviewRequestResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  userName: zod.string(),
+  userClass: zod.string().nullish(),
+  type: zod.enum(["name_change", "role_change"]),
+  currentValue: zod.string(),
+  requestedValue: zod.string(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  reviewedBy: zod.string().nullish(),
+  reviewNote: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Assign or unassign a class to a teacher (class teacher role)
+ */
+export const AssignStaffClassParams = zod.object({
+  staffId: zod.coerce.string(),
+});
+
+export const AssignStaffClassBody = zod.object({
+  assignedClass: zod.string().nullable(),
+});
+
+export const AssignStaffClassResponse = zod.object({
+  staffId: zod.string(),
+  name: zod.string(),
+  subject: zod.string(),
+  staffRole: zod.string(),
+  permissions: zod.object({
+    manage_exams: zod.boolean(),
+    view_all_exams: zod.boolean(),
+    view_all_results: zod.boolean(),
+    manage_students: zod.boolean(),
+    reset_student_exam: zod.boolean(),
+  }),
+  profilePicture: zod.string().nullish(),
+  assignedClass: zod.string().nullish(),
 });
 
 /**

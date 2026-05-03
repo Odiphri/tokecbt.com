@@ -1,6 +1,31 @@
 import { Router, type IRouter } from "express";
-import { db, examsTable, questionsTable, resultsTable, studentsTable } from "@workspace/db";
+import { db, examsTable, questionsTable, resultsTable, studentsTable, teachersTable } from "@workspace/db";
 import { eq, and, sql, avg, desc } from "drizzle-orm";
+
+const CLASS_LEVELS = ["JSS1", "JSS2", "JSS3", "SS1", "SS2", "SS3"] as const;
+
+function parseClass(cls: string): { level: string; section: string } | null {
+  const m = cls.match(/^(JSS[123]|SS[123])([ABC])$/);
+  if (!m) return null;
+  return { level: m[1], section: m[2] };
+}
+
+function promoteClass(cls: string): string | null {
+  const parts = parseClass(cls);
+  if (!parts) return null;
+  const idx = CLASS_LEVELS.indexOf(parts.level as typeof CLASS_LEVELS[number]);
+  if (idx === -1 || idx === CLASS_LEVELS.length - 1) return null;
+  return `${CLASS_LEVELS[idx + 1]}${parts.section}`;
+}
+
+function demoteClass(cls: string): string | null {
+  const parts = parseClass(cls);
+  if (!parts) return null;
+  const idx = CLASS_LEVELS.indexOf(parts.level as typeof CLASS_LEVELS[number]);
+  if (idx <= 0) return null;
+  return `${CLASS_LEVELS[idx - 1]}${parts.section}`;
+}
+
 import { requireAuth, requireRole } from "../middlewares/auth";
 import {
   CreateAdminStudentBody,
@@ -136,6 +161,88 @@ router.delete("/teacher/students/:regNumber", async (req, res): Promise<void> =>
   await db.delete(resultsTable).where(eq(resultsTable.studentReg, regNumber));
   await db.delete(studentsTable).where(eq(studentsTable.regNumber, regNumber));
   res.json({ success: true });
+});
+
+// ─── Class Teacher routes ─────────────────────────────────────────────────────
+
+function isClassTeacher(user: Express.Request["user"]): boolean {
+  return user?.role === "admin" || !!(user?.assignedClass);
+}
+
+router.get("/teacher/class-students", async (req, res): Promise<void> => {
+  const user = req.user!;
+  if (!isClassTeacher(user)) {
+    res.status(403).json({ error: "You are not assigned as a class teacher" });
+    return;
+  }
+  const assignedClass = user.role === "admin" ? null : user.assignedClass;
+  if (!assignedClass) {
+    res.json([]);
+    return;
+  }
+  const students = await db.select().from(studentsTable).where(eq(studentsTable.class, assignedClass));
+  res.json(students.map(s => ({
+    regNumber: s.regNumber,
+    name: s.name,
+    class: s.class,
+    isDefaultPassword: s.isDefaultPassword,
+    studentRole: s.studentRole ?? "Student",
+    profilePicture: s.profilePicture ?? null,
+  })));
+});
+
+router.post("/teacher/students/:regNumber/promote", async (req, res): Promise<void> => {
+  const user = req.user!;
+  if (!isClassTeacher(user) && !canManageStudents(user)) {
+    res.status(403).json({ error: "Class teacher or manage_students permission required" });
+    return;
+  }
+  const { regNumber } = req.params;
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.regNumber, regNumber));
+  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+
+  const newClass = promoteClass(student.class);
+  if (!newClass) {
+    res.status(400).json({ error: `Student is already in the highest class (${student.class})` });
+    return;
+  }
+
+  const [updated] = await db.update(studentsTable).set({ class: newClass }).where(eq(studentsTable.regNumber, regNumber)).returning();
+  res.json({
+    regNumber: updated.regNumber,
+    name: updated.name,
+    class: updated.class,
+    isDefaultPassword: updated.isDefaultPassword,
+    studentRole: updated.studentRole ?? "Student",
+    profilePicture: updated.profilePicture ?? null,
+  });
+});
+
+router.post("/teacher/students/:regNumber/demote", async (req, res): Promise<void> => {
+  const user = req.user!;
+  if (!isClassTeacher(user) && !canManageStudents(user)) {
+    res.status(403).json({ error: "Class teacher or manage_students permission required" });
+    return;
+  }
+  const { regNumber } = req.params;
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.regNumber, regNumber));
+  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+
+  const newClass = demoteClass(student.class);
+  if (!newClass) {
+    res.status(400).json({ error: `Student is already in the lowest class (${student.class})` });
+    return;
+  }
+
+  const [updated] = await db.update(studentsTable).set({ class: newClass }).where(eq(studentsTable.regNumber, regNumber)).returning();
+  res.json({
+    regNumber: updated.regNumber,
+    name: updated.name,
+    class: updated.class,
+    isDefaultPassword: updated.isDefaultPassword,
+    studentRole: updated.studentRole ?? "Student",
+    profilePicture: updated.profilePicture ?? null,
+  });
 });
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────

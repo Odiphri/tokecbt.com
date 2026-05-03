@@ -18,4 +18,5 @@ export interface UserInfo {
   permissions?: StaffPermissions | null;
   profilePicture?: string | null;
   studentRole?: string | null;
+  assignedClass?: string | null;
 }

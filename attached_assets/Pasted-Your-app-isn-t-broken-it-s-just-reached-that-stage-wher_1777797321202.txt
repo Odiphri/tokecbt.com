@@ -1,0 +1,296 @@
+Your app isn’t “broken”… it’s just reached that stage where features exist, but the logic underneath is still acting like a confused security guard 😄
+Time to give it rules, structure, and a bit of discipline.
+
+What you need now is a very precise upgrade instruction so Replit fixes both the logic and the UI behavior.
+
+Copy this and feed it in 👇
+
+
+---
+
+🧠 FIX + UPGRADE PROMPT (Settings, Class Control, Student Roles)
+
+⚠️ MAIN GOAL
+
+Fix the settings page functionality and implement proper class control, student role system, and permission logic.
+
+
+---
+
+🔧 1. FIX SETTINGS PAGE (NOT WORKING)
+
+For Staff (Teachers/Admins):
+
+Ensure the settings page is fully functional with backend integration:
+
+Update Name
+
+Upload/Change Profile Picture
+
+Change Password (with current password verification)
+
+
+👉 All changes must:
+
+Save to database
+
+Reflect immediately after update
+
+Validate inputs properly
+
+
+
+---
+
+👨‍🏫 2. CLASS TEACHER SYSTEM
+
+Add “Class Teacher” Feature:
+
+Each class should have a class_teacher_id
+
+A teacher assigned to a class becomes Class Teacher
+
+
+Class Teacher Permissions:
+
+Can view only students in their class
+
+Can:
+
+Edit student details
+
+Promote student (move to next class)
+
+Demote student (move to previous class)
+
+
+
+Promote/Demote Logic:
+
+Add buttons:
+
+Promote ⬆
+
+Demote ⬇
+
+
+When clicked:
+
+Update student’s class_id
+
+Confirm action with modal:
+
+> “Are you sure you want to promote this student?”
+
+
+
+
+
+
+---
+
+🎓 3. STUDENT SETTINGS SYSTEM
+
+Students should have:
+
+Change Profile Picture ✅
+
+Request Name Change (not direct change)
+
+Request Role Change
+
+
+
+---
+
+📩 4. REQUEST SYSTEM (VERY IMPORTANT)
+
+Create a new system:
+
+Table: requests
+
+Fields:
+
+id
+
+user_id
+
+type (name_change, role_change)
+
+requested_value
+
+status (pending, approved, rejected)
+
+reviewed_by
+
+
+Behavior:
+
+Students submit request
+
+Admin sees all requests
+
+Admin can:
+
+Approve → update data
+
+Reject
+
+
+
+
+---
+
+🏷️ 5. CUSTOM STUDENT ROLE SYSTEM
+
+Admin can create custom roles:
+
+e.g. Prefect, Head Boy, Time Keeper
+
+
+Store roles in:
+
+student_roles table
+
+
+Assign roles to students
+
+
+
+---
+
+🧩 6. PREFECT SYSTEM (SPECIAL LOGIC)
+
+If role = “Prefect”:
+
+Show additional field:
+
+“Select Prefect Position”
+
+Head Boy
+
+Head Girl
+
+Library Prefect
+
+etc.
+
+
+
+
+---
+
+👑 7. PREFECT PERMISSIONS
+
+Prefects should:
+
+View all students
+
+Edit student details
+
+
+BUT 🚫:
+
+Cannot edit other prefects
+
+Cannot edit Head Boy / Head Girl (if lower rank)
+
+
+Logic:
+
+Add hierarchy:
+
+Head Boy / Head Girl (highest)
+
+Other Prefects
+
+Normal Students
+
+
+
+
+---
+
+🧠 Permission Rule:
+
+IF user.role == prefect:
+   allow edit student
+   BUT:
+      if target.role == prefect:
+         deny
+      if target.role == headboy/headgirl:
+         deny (unless same level or higher)
+
+
+---
+
+🎯 8. UI BEHAVIOR FIXES
+
+Settings Page Must:
+
+Actually send API requests
+
+Show success/error messages
+
+Preview profile image before upload
+
+
+
+---
+
+🧱 9. DATABASE CHANGES SUMMARY
+
+Add/Update:
+
+users
+
+name
+
+profile_photo
+
+role_id
+
+
+classes
+
+class_teacher_id
+
+
+students
+
+class_id
+
+role_id
+
+
+student_roles
+
+requests
+
+
+
+---
+
+🚨 FINAL RULE (VERY IMPORTANT)
+
+All permissions must be enforced:
+
+On backend (server-side)
+
+Not just hidden in frontend
+
+
+
+---
+
+🧨 REALITY CHECK
+
+What you’re building now?
+
+Not just a CBT app anymore…
+
+This is slowly turning into a full school management system — the kind schools would actually pay for if it’s stable.
+
+Right now your biggest enemy is not features…
+
+It’s logic consistency.

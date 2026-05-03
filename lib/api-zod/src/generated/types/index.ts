@@ -7,10 +7,13 @@
  */
 
 export * from "./adminStats";
+export * from "./assignClassBody";
 export * from "./changePasswordBody";
 export * from "./createExamBody";
 export * from "./createQuestionBody";
 export * from "./createQuestionBodyCorrectOption";
+export * from "./createRequestBody";
+export * from "./createRequestBodyType";
 export * from "./createStaffBody";
 export * from "./createStudentBody";
 export * from "./errorResponse";
@@ -25,8 +28,13 @@ export * from "./loginResponse";
 export * from "./loginResponseRole";
 export * from "./question";
 export * from "./questionCorrectOption";
+export * from "./requestRecord";
+export * from "./requestRecordStatus";
+export * from "./requestRecordType";
 export * from "./resultWithExam";
 export * from "./resultWithStudent";
+export * from "./reviewRequestBody";
+export * from "./reviewRequestBodyStatus";
 export * from "./staffPermissions";
 export * from "./staffRecord";
 export * from "./studentRecord";
@@ -35,6 +43,7 @@ export * from "./submitExamBodyAnswers";
 export * from "./successResponse";
 export * from "./teacherDashboard";
 export * from "./toggleExamResultsBody";
+export * from "./updateNameBody";
 export * from "./updateProfilePictureBody";
 export * from "./updateStaffBody";
 export * from "./updateStudentBody";
