@@ -25,6 +25,7 @@ import AdminStudents from "@/pages/admin/students";
 import AdminStaff from "@/pages/admin/staff";
 import AdminExams from "@/pages/admin/exams";
 import AdminRequests from "@/pages/admin/requests";
+import AdminRoles from "@/pages/admin/roles";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ function Router() {
       <ProtectedRoute path="/admin/staff" role="admin" component={AdminStaff} />
       <ProtectedRoute path="/admin/exams" role="admin" component={AdminExams} />
       <ProtectedRoute path="/admin/requests" role="admin" component={AdminRequests} />
+      <ProtectedRoute path="/admin/roles" role="admin" component={AdminRoles} />
 
       <Route component={NotFound} />
     </Switch>

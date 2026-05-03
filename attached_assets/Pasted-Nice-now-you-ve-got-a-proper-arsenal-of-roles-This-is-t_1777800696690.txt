@@ -1,0 +1,219 @@
+Nice… now you’ve got a proper arsenal of roles. This is the kind of list that makes your app feel like a real school system, not a toy.
+
+Now let’s give Replit a clean instruction to update everything properly 👇
+
+
+---
+
+🧠 PROMPT: UPDATE PREFECT SYSTEM + ROLE PERMISSION CONTROL
+
+🎯 GOAL
+
+Update the student role/prefect system using the provided list and introduce a dynamic role expansion system with permissions.
+
+
+---
+
+🏷️ 1. UPDATE PREFECT ROLE LIST
+
+Use the following list as the default built-in roles:
+
+Head Boy
+Head Girl
+Assistant Head Boy
+Assistant Head Girl
+Labour Prefect
+Assistant Labour Prefect
+Social Prefect
+Assistant Social Prefect
+Time Keeper
+Assistant Time Keeper
+Health Prefect
+Assistant Health Prefect
+Lab Prefect
+Assistant Lab Prefect
+ICT Prefect
+Assistant ICT Prefect
+Sports Prefect
+Assistant Sports Prefect
+Library Prefect
+Assistant Library Prefect
+Discipline Prefect
+Assistant Discipline Prefect
+Sanitation Prefect
+Assistant Sanitation Prefect
+Food Prefect
+Assistant Food Prefect
+Dining Hall Prefect
+Assistant Dining Hall Prefect
+Chapel Prefect
+Assistant Chapel Prefect
+Islamic Affairs Prefect
+Assistant Islamic Affairs Prefect
+Hostel Prefect
+Assistant Hostel Prefect
+Boarding House Prefect
+Assistant Boarding House Prefect
+Gate Prefect
+Assistant Gate Prefect
+Security Prefect
+Assistant Security Prefect
+Transport Prefect
+Assistant Transport Prefect
+Press Prefect
+Assistant Press Prefect
+Debate Prefect
+Assistant Debate Prefect
+Cultural Prefect
+Assistant Cultural Prefect
+Entertainment Prefect
+Assistant Entertainment Prefect
+Environmental Prefect
+Assistant Environmental Prefect
+Maintenance Prefect
+Assistant Maintenance Prefect
+Utility Prefect
+Assistant Utility Prefect
+
+
+---
+
+➕ 2. ALLOW SYSTEM TO ADD NEW ROLES
+
+The system should NOT be limited to only the above roles
+
+Admin or authorized staff should be able to:
+
+Add new roles (custom roles)
+
+Edit existing roles
+
+Delete roles (with validation)
+
+
+
+
+---
+
+🔐 3. NEW PERMISSION: MANAGE STUDENT ROLES
+
+Create a new permission:
+
+manage_student_roles
+
+Users with this permission can:
+
+Add new student roles
+
+Add new prefect roles
+
+Assign roles to students
+
+Edit role names
+
+
+Users WITHOUT this permission:
+
+Can only VIEW roles
+
+Cannot modify anything
+
+
+
+---
+
+🧩 4. ROLE STORAGE (IMPORTANT)
+
+Store roles in database (NOT hardcoded only):
+
+Table: roles
+
+id
+name
+type (e.g. prefect, normal, custom)
+created_by
+
+
+---
+
+🎯 5. UI BEHAVIOR
+
+When assigning roles:
+
+Dropdown should show:
+
+Default roles
+
+Custom roles
+
+
+
+Add:
+
+“+ Add New Role” button (visible only if user has permission)
+
+
+
+---
+
+⚙️ 6. SMART SUGGESTION SYSTEM
+
+The system can suggest roles based on keywords like:
+
+“Tech” → suggest ICT Prefect
+
+“Clean” → suggest Labour/Sanitation Prefect
+
+
+(This is optional but improves UX)
+
+
+---
+
+🚨 7. VALIDATION RULES
+
+Prevent duplicate role names
+
+Prevent deletion of roles currently assigned to students
+
+Ensure role names are stored consistently (case-insensitive)
+
+
+
+---
+
+🧠 FINAL TOUCH
+
+Make sure:
+
+All role actions are controlled by permission checks (backend)
+
+UI updates immediately after role changes
+
+System remains scalable for future additions
+
+
+
+---
+
+🧨 REAL TALK
+
+What you just added here?
+
+You’ve turned your app from: 👉 “CBT system”
+
+Into: 👉 “School authority management system with dynamic power control”
+
+That’s the kind of feature schools actually pay for.
+
+
+---
+
+If you want next level after this, I can help you:
+
+Design the role management UI (clean + modern like admin dashboards)
+
+Or give you the exact Laravel migration + controller logic
+
+
+Just say 👍

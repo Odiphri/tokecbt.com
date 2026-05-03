@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, LogOut, FileText, CheckSquare, Users, GraduationCap, Shield, Settings, ClipboardList, Inbox, School } from "lucide-react";
+import { BookOpen, LayoutDashboard, LogOut, FileText, CheckSquare, Users, GraduationCap, Shield, Settings, ClipboardList, Inbox, School, ShieldCheck } from "lucide-react";
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -303,6 +303,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                       <Link href="/admin/requests">
                         <Inbox />
                         <span>Requests</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/roles")}>
+                      <Link href="/admin/roles">
+                        <ShieldCheck />
+                        <span>Roles</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

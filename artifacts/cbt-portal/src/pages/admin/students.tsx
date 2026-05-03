@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetAdminStudents, useCreateAdminStudent, useUpdateAdminStudent, useDeleteAdminStudent, getGetAdminStudentsQueryKey } from "@workspace/api-client-react";
+import { useGetAdminStudents, useCreateAdminStudent, useUpdateAdminStudent, useDeleteAdminStudent, getGetAdminStudentsQueryKey, useGetAdminRoles } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CLASS_SECTIONS } from "@/lib/class-sections";
-import { STUDENT_POSITIONS } from "@/lib/student-positions";
 import { cn } from "@/lib/utils";
 
 type StudentForm = { regNumber: string; name: string; class: string; password: string; studentRole: string };
@@ -68,6 +67,8 @@ function SearchableClassSelect({ value, onChange }: { value: string; onChange: (
 
 function SearchablePositionSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const { data: roles } = useGetAdminRoles();
+  const roleNames = roles ? roles.map(r => r.name) : ["Student"];
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -82,7 +83,7 @@ function SearchablePositionSelect({ value, onChange }: { value: string; onChange
           <CommandList>
             <CommandEmpty>No position found.</CommandEmpty>
             <CommandGroup>
-              {STUDENT_POSITIONS.map(pos => (
+              {roleNames.map(pos => (
                 <CommandItem key={pos} value={pos} onSelect={() => { onChange(pos); setOpen(false); }}>
                   <Check className={cn("mr-2 h-4 w-4", value === pos ? "opacity-100" : "opacity-0")} />
                   {pos}

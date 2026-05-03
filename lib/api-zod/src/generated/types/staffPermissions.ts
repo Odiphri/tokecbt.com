@@ -12,4 +12,5 @@ export interface StaffPermissions {
   view_all_results: boolean;
   manage_students: boolean;
   reset_student_exam: boolean;
+  manage_student_roles: boolean;
 }
