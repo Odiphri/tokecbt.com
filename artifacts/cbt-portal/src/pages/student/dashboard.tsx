@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, Calendar, CheckCircle2, ChevronRight, Award, Lock, AlertTriangle } from "lucide-react";
+import { Clock, Calendar, CheckCircle2, ChevronRight, Award, Lock, AlertTriangle, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 
 function getExamStatus(exam: { startTime?: string | null; endTime?: string | null }) {
@@ -31,11 +31,11 @@ export default function StudentDashboard() {
 
   function handleExamClick(exam: NonNullable<typeof exams>[number]) {
     const status = getExamStatus(exam);
-    if (status === "upcoming") return; // blocked
-    if (status === "expired") return; // blocked
+    if (status === "upcoming") return;
+    if (status === "expired") return;
+    if ((exam as any).paymentBlocked) return;
 
     if (exam.alreadySubmitted) {
-      // Go to results page
       setLocation("/student/results");
       return;
     }
@@ -77,15 +77,23 @@ export default function StudentDashboard() {
             ) : (
               exams?.map((exam) => {
                 const status = getExamStatus(exam);
-                const isBlocked = status === "upcoming" || status === "expired";
+                const isTimeLocked = status === "upcoming" || status === "expired";
+                const isPaymentBlocked = !!(exam as any).paymentBlocked;
+                const isBlocked = isTimeLocked || isPaymentBlocked;
                 const isAttempted = exam.alreadySubmitted;
 
                 return (
-                  <div key={exam.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors ${isBlocked ? "bg-gray-50 opacity-70" : "bg-card hover:bg-slate-50"}`}>
+                  <div key={exam.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors ${isBlocked ? "bg-gray-50 opacity-80" : "bg-card hover:bg-slate-50"}`}>
                     <div className="space-y-1 mb-4 sm:mb-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-lg">{exam.subject}</h3>
                         <ExamStatusBadge status={status} />
+                        {isPaymentBlocked && (
+                          <Badge variant="outline" className="text-red-600 border-red-400 bg-red-50">
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            Fees Outstanding
+                          </Badge>
+                        )}
                         {isAttempted && (
                           <Badge className="bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-100">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -116,7 +124,12 @@ export default function StudentDashboard() {
                       </div>
                     </div>
 
-                    {isBlocked ? (
+                    {isPaymentBlocked && !isAttempted ? (
+                      <Button variant="outline" disabled className="opacity-60 border-red-300 text-red-600">
+                        <Lock className="mr-2 h-4 w-4" />
+                        Access Restricted
+                      </Button>
+                    ) : isTimeLocked ? (
                       <Button variant="outline" disabled className="opacity-60">
                         <Lock className="mr-2 h-4 w-4" />
                         {status === "upcoming" ? "Not Started" : "Expired"}

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, studentsTable, examsTable, questionsTable, resultsTable, requestsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { db, studentsTable, examsTable, questionsTable, resultsTable, requestsTable, paymentsTable, overridesTable } from "@workspace/db";
+import { eq, and, sql, or, isNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { SubmitExamBody, GetStudentExamParams, SubmitExamParams } from "@workspace/api-zod";
 import { z } from "zod";
@@ -47,13 +47,30 @@ router.get("/student/exams", async (req, res): Promise<void> => {
       .map(r => r.examId)
   );
 
+  // Payment status for this student
+  const [payment] = await db.select().from(paymentsTable).where(eq(paymentsTable.studentReg, user.id));
+  const isPaid = payment?.status === "paid";
+
+  // Check for any active override
   const now = new Date();
+  let hasGlobalOverride = false;
+  if (!isPaid) {
+    const overrides = await db.select().from(overridesTable).where(eq(overridesTable.studentReg, user.id));
+    hasGlobalOverride = overrides.some(o => {
+      const notExpired = !o.expiresAt || o.expiresAt > now;
+      const isGlobal = !o.examId;
+      return notExpired && isGlobal;
+    });
+  }
+
   const examsWithStatus = exams.map(e => ({
     ...e,
     startTime: e.startTime?.toISOString() ?? null,
     endTime: e.endTime?.toISOString() ?? null,
     alreadySubmitted: submittedExamIds.has(e.id),
     resultsEnabled: e.resultsEnabled,
+    paymentBlocked: !isPaid && !hasGlobalOverride,
+    paymentStatus: payment?.status ?? "unpaid",
   }));
 
   res.json(examsWithStatus);
@@ -98,6 +115,29 @@ router.get("/student/exams/:examId", async (req, res): Promise<void> => {
     res.status(403).json({ error: "This exam has expired and is no longer available." });
     return;
   }
+
+  // ── Payment gate ──────────────────────────────────────────────────────────
+  const [payment] = await db.select().from(paymentsTable).where(eq(paymentsTable.studentReg, user.id));
+  const isPaid = payment?.status === "paid";
+
+  if (!isPaid) {
+    const now = new Date();
+    const overrides = await db.select().from(overridesTable).where(eq(overridesTable.studentReg, user.id));
+    const hasValidOverride = overrides.some(o => {
+      const notExpired = !o.expiresAt || o.expiresAt > now;
+      const matchesExam = !o.examId || o.examId === String(exam.id);
+      return notExpired && matchesExam;
+    });
+
+    if (!hasValidOverride) {
+      res.status(403).json({
+        error: "Exam access restricted. Your fees are outstanding. Please visit the bursary office or contact an administrator for assistance.",
+        code: "PAYMENT_REQUIRED",
+      });
+      return;
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const [existingResult] = await db
     .select()

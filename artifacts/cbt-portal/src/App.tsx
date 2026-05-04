@@ -15,6 +15,8 @@ import StudentExam from "@/pages/student/exam";
 import StudentResults from "@/pages/student/results";
 import TeachersDirectory from "@/pages/student/teachers-directory";
 import StudentsDirectory from "@/pages/student/students-directory";
+import StudentProfile from "@/pages/student/profile";
+import TeacherProfile from "@/pages/teacher/profile";
 import StaffDashboard from "@/pages/teacher/dashboard";
 import StaffExams from "@/pages/teacher/exams";
 import ExamForm from "@/pages/teacher/exam-form";
@@ -49,6 +51,7 @@ function Router() {
       <ProtectedRoute path="/student/results" role="student" component={StudentResults} />
       <ProtectedRoute path="/student/teachers" role="student" component={TeachersDirectory} />
       <ProtectedRoute path="/student/directory" role="student" component={StudentsDirectory} />
+      <ProtectedRoute path="/student/profile" role="student" component={StudentProfile} />
 
       {/* Staff Routes */}
       <ProtectedRoute path="/teacher/dashboard" role="staff" component={StaffDashboard} />
@@ -60,6 +63,7 @@ function Router() {
       <ProtectedRoute path="/teacher/students" role="staff" component={StaffStudents} />
       <ProtectedRoute path="/teacher/class" role="staff" component={TeacherClass} />
       <ProtectedRoute path="/teacher/attendance" role="staff" component={AttendancePage} />
+      <ProtectedRoute path="/teacher/profile" role="staff" component={TeacherProfile} />
 
       {/* Admin Routes */}
       <ProtectedRoute path="/admin/dashboard" role="admin" component={AdminDashboard} />
