@@ -6,3 +6,7 @@ export * from "./results";
 export * from "./admins";
 export * from "./requests";
 export * from "./roles";
+export * from "./attendance";
+export * from "./payments";
+export * from "./overrides";
+export * from "./school-settings";
