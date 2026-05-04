@@ -34,6 +34,7 @@ import {
   DollarSign,
   UsersRound,
   GalleryHorizontalEnd,
+  UserCircle,
 } from "lucide-react";
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -95,6 +96,14 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/student/profile"}>
+                      <Link href="/student/profile">
+                        <UserCircle />
+                        <span>My Profile</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/settings"}>
                       <Link href="/settings">
                         <Settings />
@@ -108,7 +117,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
           </SidebarContent>
           <SidebarFooter className="border-t p-4">
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
+              <Link href="/student/profile" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={user.profilePicture ?? undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm font-bold">{initials}</AvatarFallback>
@@ -117,7 +126,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                   <span className="text-sm font-medium truncate">{user.name}</span>
                   <span className="text-xs text-muted-foreground">Class {user.class}</span>
                 </div>
-              </div>
+              </Link>
               <Button variant="outline" className="w-full justify-start" onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
@@ -228,6 +237,14 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuItem>
                   )}
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/teacher/profile"}>
+                      <Link href="/teacher/profile">
+                        <UserCircle />
+                        <span>My Profile</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/settings"}>
                       <Link href="/settings">
                         <Settings />
@@ -241,7 +258,7 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
           </SidebarContent>
           <SidebarFooter className="border-t p-4">
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
+              <Link href="/teacher/profile" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={user.profilePicture ?? undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary text-sm font-bold">{initials}</AvatarFallback>
@@ -250,7 +267,7 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                   <span className="text-sm font-medium truncate">{user.name}</span>
                   <span className="text-xs text-muted-foreground">{staffRoleLabel}</span>
                 </div>
-              </div>
+              </Link>
               <Button variant="outline" className="w-full justify-start" onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
