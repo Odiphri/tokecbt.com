@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { useGetTeacherExam, useGetExamQuestions, useDeleteQuestion, useDeleteExam, getGetExamQuestionsQueryKey, getGetTeacherExamsQueryKey } from "@workspace/api-client-react";
+import { useGetTeacherExam, useGetExamQuestions, useDeleteQuestion, useDeleteExam, getGetExamQuestionsQueryKey, getGetTeacherExamsQueryKey, useCreateQuestion } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings, Sparkles } from "lucide-react";
 import QuestionForm from "./question-form";
 import {
   AlertDialog,
@@ -19,6 +19,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const token = localStorage.getItem("cbt_token");
+  const res = await fetch(`/api${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options?.headers ?? {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Request failed");
+  return data;
+}
+
+interface GeneratedQuestion {
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: "A" | "B" | "C" | "D";
+}
 
 export default function ExamDetail() {
   const { examId } = useParams();
@@ -32,10 +60,20 @@ export default function ExamDetail() {
   const { data: questions, isLoading: isQuestionsLoading } = useGetExamQuestions(id);
   const deleteMutation = useDeleteQuestion();
   const deleteExamMutation = useDeleteExam();
+  const createQuestionMutation = useCreateQuestion();
 
   const [questionToEdit, setQuestionToEdit] = useState<any | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showDeleteExam, setShowDeleteExam] = useState(false);
+
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiTopics, setAiTopics] = useState("");
+  const [aiCount, setAiCount] = useState("10");
+  const [aiDifficulty, setAiDifficulty] = useState("medium");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [selectedGenerated, setSelectedGenerated] = useState<Set<number>>(new Set());
 
   const canManage = user?.role === "admin" || !!user?.permissions?.manage_exams || !!user?.permissions?.view_all_exams;
 
@@ -77,6 +115,68 @@ export default function ExamDetail() {
     setIsFormOpen(true);
   };
 
+  async function generateQuestions() {
+    if (!aiTopics.trim()) {
+      toast({ variant: "destructive", title: "Please enter topics" });
+      return;
+    }
+    const count = parseInt(aiCount, 10);
+    if (isNaN(count) || count < 1 || count > 50) {
+      toast({ variant: "destructive", title: "Count must be between 1 and 50" });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const data = await apiFetch("/teacher/ai-questions", {
+        method: "POST",
+        body: JSON.stringify({
+          subject: exam?.subject ?? "General",
+          topics: aiTopics,
+          count,
+          difficulty: aiDifficulty,
+        }),
+      });
+      setGeneratedQuestions(data.questions);
+      setSelectedGenerated(new Set(data.questions.map((_: any, i: number) => i)));
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "AI generation failed", description: err.message });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function importSelected() {
+    const toImport = generatedQuestions.filter((_, i) => selectedGenerated.has(i));
+    if (toImport.length === 0) {
+      toast({ variant: "destructive", title: "No questions selected" });
+      return;
+    }
+    setIsImporting(true);
+    let imported = 0;
+    for (const q of toImport) {
+      try {
+        await createQuestionMutation.mutateAsync({ examId: id, data: q as any });
+        imported++;
+      } catch {
+        /* continue */
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: getGetExamQuestionsQueryKey(id) });
+    toast({ title: `${imported} question${imported !== 1 ? "s" : ""} imported successfully` });
+    setIsImporting(false);
+    setShowAiModal(false);
+    setGeneratedQuestions([]);
+    setSelectedGenerated(new Set());
+  }
+
+  function toggleGenerated(i: number) {
+    setSelectedGenerated(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  }
+
   if (isExamLoading || isQuestionsLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -89,7 +189,7 @@ export default function ExamDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           <Link href="/teacher/exams">
             <Button variant="outline" size="icon">
@@ -101,7 +201,7 @@ export default function ExamDetail() {
             <p className="text-muted-foreground mt-1">Class: {exam.class} | Duration: {exam.durationMinutes} mins</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {canManage && (
             <Link href={`/teacher/exams/${id}/edit`}>
               <Button variant="outline">
@@ -109,6 +209,16 @@ export default function ExamDetail() {
                 Settings
               </Button>
             </Link>
+          )}
+          {canManage && (
+            <Button
+              variant="outline"
+              onClick={() => setShowAiModal(true)}
+              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Set Questions
+            </Button>
           )}
           {canManage && (
             <Button
@@ -164,12 +274,113 @@ export default function ExamDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* AI Question Generator Modal */}
+      <Dialog open={showAiModal} onOpenChange={v => { if (!isGenerating && !isImporting) setShowAiModal(v); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              AI Set Questions — {exam.subject}
+            </DialogTitle>
+          </DialogHeader>
+
+          {generatedQuestions.length === 0 ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Topics / Areas to Cover</label>
+                <Textarea
+                  className="mt-1"
+                  placeholder={`e.g. Photosynthesis, Cell Division, DNA Replication`}
+                  value={aiTopics}
+                  onChange={e => setAiTopics(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Number of Questions</label>
+                  <Input className="mt-1" type="number" min={1} max={50} value={aiCount} onChange={e => setAiCount(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Difficulty</label>
+                  <Select value={aiDifficulty} onValueChange={setAiDifficulty}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowAiModal(false)}>Cancel</Button>
+                <Button onClick={generateQuestions} disabled={isGenerating} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate</>}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{selectedGenerated.size} of {generatedQuestions.length} selected</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setSelectedGenerated(new Set(generatedQuestions.map((_, i) => i)))}>Select All</Button>
+                  <Button size="sm" variant="outline" onClick={() => setSelectedGenerated(new Set())}>Deselect All</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setGeneratedQuestions([]); setSelectedGenerated(new Set()); }}>Regenerate</Button>
+                </div>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {generatedQuestions.map((q, i) => (
+                  <div
+                    key={i}
+                    onClick={() => toggleGenerated(i)}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedGenerated.has(i) ? "border-purple-400 bg-purple-50" : "border-gray-200 bg-gray-50 opacity-60"}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <input type="checkbox" checked={selectedGenerated.has(i)} onChange={() => toggleGenerated(i)} className="mt-1 cursor-pointer" onClick={e => e.stopPropagation()} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm mb-2">{i + 1}. {q.questionText}</p>
+                        <div className="grid grid-cols-2 gap-1">
+                          {(["A", "B", "C", "D"] as const).map(opt => (
+                            <span key={opt} className={`text-xs p-1.5 rounded ${q.correctOption === opt ? "bg-green-100 text-green-700 font-medium" : "bg-white"}`}>
+                              {opt}. {q[`option${opt}`]}
+                              {q.correctOption === opt && <Badge className="ml-1 text-[10px] py-0 px-1 bg-green-600">✓</Badge>}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowAiModal(false)} disabled={isImporting}>Cancel</Button>
+                <Button onClick={importSelected} disabled={isImporting || selectedGenerated.size === 0} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  {isImporting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</> : <>Import {selectedGenerated.size} Question{selectedGenerated.size !== 1 ? "s" : ""}</>}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-4">
         {questions?.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-muted-foreground mb-4">No questions have been added to this exam yet.</p>
-              {canManage && <Button onClick={openNewForm}>Add First Question</Button>}
+              {canManage && (
+                <div className="flex gap-2">
+                  <Button onClick={openNewForm}>Add First Question</Button>
+                  <Button variant="outline" onClick={() => setShowAiModal(true)} className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI Generate
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (

@@ -206,7 +206,8 @@ router.post("/admin/staff", async (req, res): Promise<void> => {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-  const permissions = parsed.data.permissions ?? DEFAULT_PERMISSIONS_BY_ROLE[parsed.data.staffRole as keyof typeof DEFAULT_PERMISSIONS_BY_ROLE] ?? DEFAULT_EMPTY_PERMISSIONS;
+  const basePerms = DEFAULT_PERMISSIONS_BY_ROLE[parsed.data.staffRole as keyof typeof DEFAULT_PERMISSIONS_BY_ROLE] ?? DEFAULT_EMPTY_PERMISSIONS;
+  const permissions = { ...basePerms, ...(parsed.data.permissions ?? {}) };
 
   const [staff] = await db.insert(teachersTable).values({
     teacherId: parsed.data.staffId,

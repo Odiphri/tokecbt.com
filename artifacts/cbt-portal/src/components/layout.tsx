@@ -16,7 +16,25 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, LogOut, FileText, CheckSquare, Users, GraduationCap, Shield, Settings, ClipboardList, Inbox, School, ShieldCheck } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  LogOut,
+  FileText,
+  CheckSquare,
+  Users,
+  GraduationCap,
+  Shield,
+  Settings,
+  ClipboardList,
+  Inbox,
+  School,
+  ShieldCheck,
+  CalendarCheck,
+  DollarSign,
+  UsersRound,
+  GalleryHorizontalEnd,
+} from "lucide-react";
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -61,6 +79,22 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/student/teachers"}>
+                      <Link href="/student/teachers">
+                        <GraduationCap />
+                        <span>Teachers</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/student/directory"}>
+                      <Link href="/student/directory">
+                        <UsersRound />
+                        <span>Students</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/settings"}>
                       <Link href="/settings">
                         <Settings />
@@ -99,7 +133,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
             <div className="text-sm font-medium text-primary hidden sm:block">
               {user.name} ({user.class})
               {user.studentRole && user.studentRole !== "Student" && (
-                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{user.studentRole}</span>
+                <span className="ml-2 text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full">{user.studentRole}</span>
               )}
             </div>
           </header>
@@ -119,12 +153,15 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
   if (!user || user.role !== "staff") return null;
 
   const staffRoleLabel = user.staffRole
-    ? user.staffRole.charAt(0).toUpperCase() + user.staffRole.slice(1)
+    ? user.staffRole === "cbt_personnel" ? "CBT Officer"
+    : user.staffRole.charAt(0).toUpperCase() + user.staffRole.slice(1)
     : "Staff";
 
   const initials = user.name
     ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : "SF";
+
+  const canMarkAttendance = !!(user as any).permissions?.mark_attendance || !!(user as any).assignedClass;
 
   return (
     <SidebarProvider>
@@ -150,22 +187,12 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {user.permissions?.manage_exams && (
+                  {(user.permissions?.manage_exams || user.permissions?.view_all_exams) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={location.startsWith("/teacher/exams")}>
                         <Link href="/teacher/exams">
                           <FileText />
-                          <span>Manage Exams</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {user.permissions?.view_all_exams && !user.permissions?.manage_exams && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={location.startsWith("/teacher/exams")}>
-                        <Link href="/teacher/exams">
-                          <FileText />
-                          <span>All Exams</span>
+                          <span>{user.permissions?.manage_exams ? "Manage Exams" : "All Exams"}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -186,6 +213,16 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                         <Link href="/teacher/class">
                           <School />
                           <span>My Class</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canMarkAttendance && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/teacher/attendance"}>
+                        <Link href="/teacher/attendance">
+                          <CalendarCheck />
+                          <span>Attendance</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -251,7 +288,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
         <Sidebar>
-          <SidebarHeader className="border-b bg-rose-700 text-white p-4">
+          <SidebarHeader className="border-b bg-primary text-primary-foreground p-4">
             <div className="flex items-center gap-2 font-bold text-lg">
               <BookOpen className="h-6 w-6" />
               <span>TOKE SCHOOLS</span>
@@ -299,6 +336,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/bursary")}>
+                      <Link href="/admin/bursary">
+                        <DollarSign />
+                        <span>Bursary</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location.startsWith("/admin/requests")}>
                       <Link href="/admin/requests">
                         <Inbox />
@@ -315,10 +360,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.startsWith("/admin/school-settings")}>
+                      <Link href="/admin/school-settings">
+                        <GalleryHorizontalEnd />
+                        <span>School Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/settings"}>
                       <Link href="/settings">
                         <Settings />
-                        <span>Settings</span>
+                        <span>My Settings</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -331,7 +384,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={user.profilePicture ?? undefined} />
-                  <AvatarFallback className="bg-rose-100 text-rose-700 text-sm font-bold">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/20 text-primary text-sm font-bold">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium truncate">{user.name}</span>
@@ -350,7 +403,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6 shadow-sm">
             <SidebarTrigger />
             <div className="flex-1" />
-            <div className="text-sm font-medium text-rose-700 hidden sm:block font-semibold">
+            <div className="text-sm font-medium text-primary hidden sm:block font-semibold">
               {user.name} — Administrator
             </div>
           </header>

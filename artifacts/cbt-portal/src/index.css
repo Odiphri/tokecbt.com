@@ -94,9 +94,9 @@
   --muted: 210 40% 92%;
   --muted-foreground: 215 16% 47%;
 
-  /* Dark Green #0A4522 */
-  --accent: 144 75% 15%;
-  --accent-foreground: 0 0% 100%;
+  /* Light Pink accent #f9c4d2 */
+  --accent: 345 84% 87%;
+  --accent-foreground: 217 69% 14%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -106,7 +106,7 @@
   --sidebar-border: 214 32% 91%;
   --sidebar-primary: 217 69% 14%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent: 345 84% 95%;
   --sidebar-accent-foreground: 217 69% 14%;
   --sidebar-ring: 217 69% 14%;
 
@@ -161,8 +161,9 @@
   --muted: 217 69% 24%;
   --muted-foreground: 215 20% 65%;
 
-  --accent: 144 75% 30%;
-  --accent-foreground: 0 0% 100%;
+  /* Light Pink in dark mode — slightly deeper */
+  --accent: 345 60% 70%;
+  --accent-foreground: 217 69% 10%;
 
   --destructive: 0 62% 30%;
   --destructive-foreground: 210 40% 98%;
