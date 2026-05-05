@@ -2,7 +2,7 @@ import { pgTable, text, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const PRESET_STAFF_ROLES = ["teacher", "hod", "librarian", "cbt_personnel"] as const;
+export const PRESET_STAFF_ROLES = ["teacher", "hod", "librarian", "cbt_personnel", "bursary_manager"] as const;
 export type PresetStaffRole = typeof PRESET_STAFF_ROLES[number];
 
 export interface StaffPermissions {
@@ -59,6 +59,17 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<PresetStaffRole, StaffPermissio
     reset_student_exam: true,
     manage_student_roles: false,
     manage_bursary: false,
+    mark_attendance: false,
+    override_exam_access: false,
+  },
+  bursary_manager: {
+    manage_exams: false,
+    view_all_exams: false,
+    view_all_results: false,
+    manage_students: false,
+    reset_student_exam: false,
+    manage_student_roles: false,
+    manage_bursary: true,
     mark_attendance: false,
     override_exam_access: false,
   },

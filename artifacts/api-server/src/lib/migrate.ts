@@ -127,6 +127,56 @@ export async function runMigrations(): Promise<void> {
         value TEXT NOT NULL
       );
 
+      -- Fee management tables
+      CREATE TABLE IF NOT EXISTS fee_types (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        amount INTEGER NOT NULL DEFAULT 0,
+        is_mandatory BOOLEAN NOT NULL DEFAULT TRUE,
+        academic_year TEXT NOT NULL DEFAULT '',
+        created_by TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS student_fee_records (
+        id SERIAL PRIMARY KEY,
+        student_reg TEXT NOT NULL,
+        fee_type_id INTEGER NOT NULL REFERENCES fee_types(id) ON DELETE CASCADE,
+        amount_due INTEGER NOT NULL DEFAULT 0,
+        amount_paid INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'unpaid',
+        due_date TEXT,
+        notes TEXT,
+        updated_by TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- Teacher subject management tables
+      CREATE TABLE IF NOT EXISTS teacher_subjects (
+        id SERIAL PRIMARY KEY,
+        teacher_id TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        section TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS subject_change_requests (
+        id SERIAL PRIMARY KEY,
+        teacher_id TEXT NOT NULL,
+        teacher_name TEXT NOT NULL,
+        action TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        section TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'pending',
+        reviewed_by TEXT,
+        review_note TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       INSERT INTO school_settings (key, value)
       VALUES
         ('school_name', 'Toke Schools'),

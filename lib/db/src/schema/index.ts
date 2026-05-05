@@ -10,3 +10,6 @@ export * from "./attendance";
 export * from "./payments";
 export * from "./overrides";
 export * from "./school-settings";
+export * from "./fee-types";
+export * from "./student-fee-records";
+export * from "./teacher-subjects";

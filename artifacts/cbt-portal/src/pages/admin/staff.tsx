@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useGetAdminStaff,
   useCreateAdminStaff,
@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap, ArrowLeft, School } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, X, ShieldCheck, Zap, ArrowLeft, School, BookOpen } from "lucide-react";
 import { CLASS_SECTIONS } from "@/lib/class-sections";
 import {
   Select,
@@ -44,6 +44,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const API_BASE = "/api";
+async function apiFetch(path: string, options?: RequestInit) {
+  const token = localStorage.getItem("cbt_token");
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? "Request failed");
+  }
+  return res.json();
+}
+
 type StaffPermissions = {
   manage_exams: boolean;
   view_all_exams: boolean;
@@ -51,20 +65,33 @@ type StaffPermissions = {
   manage_students: boolean;
   reset_student_exam: boolean;
   manage_student_roles: boolean;
+  manage_bursary: boolean;
+  mark_attendance: boolean;
+  override_exam_access: boolean;
 };
+
+type SubjectEntry = { subject: string; section: "junior" | "senior" };
 
 const ROLE_PRESETS: Record<string, { label: string; permissions: StaffPermissions }> = {
   teacher: {
     label: "Teacher",
-    permissions: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false },
+    permissions: { manage_exams: true, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false, manage_bursary: false, mark_attendance: true, override_exam_access: false },
   },
   hod: {
     label: "HOD",
-    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true, manage_student_roles: true },
+    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: true, reset_student_exam: true, manage_student_roles: true, manage_bursary: false, mark_attendance: true, override_exam_access: true },
   },
   librarian: {
     label: "Librarian",
-    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false },
+    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false, manage_bursary: false, mark_attendance: false, override_exam_access: false },
+  },
+  cbt_personnel: {
+    label: "CBT Officer",
+    permissions: { manage_exams: true, view_all_exams: true, view_all_results: true, manage_students: false, reset_student_exam: true, manage_student_roles: false, manage_bursary: false, mark_attendance: false, override_exam_access: false },
+  },
+  bursary_manager: {
+    label: "Bursary Manager",
+    permissions: { manage_exams: false, view_all_exams: false, view_all_results: false, manage_students: false, reset_student_exam: false, manage_student_roles: false, manage_bursary: true, mark_attendance: false, override_exam_access: false },
   },
 };
 
@@ -75,6 +102,9 @@ const EMPTY_PERMISSIONS: StaffPermissions = {
   manage_students: false,
   reset_student_exam: false,
   manage_student_roles: false,
+  manage_bursary: false,
+  mark_attendance: false,
+  override_exam_access: false,
 };
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, { label: string; description: string }> = {
@@ -102,6 +132,18 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, { label: string; descrip
     label: "Manage Student Roles",
     description: "Add new roles, edit role names, and assign roles to students",
   },
+  manage_bursary: {
+    label: "Manage Bursary",
+    description: "Create fee types, record payments and manage the fee structure",
+  },
+  mark_attendance: {
+    label: "Mark Attendance",
+    description: "Record daily attendance for their assigned class",
+  },
+  override_exam_access: {
+    label: "Override Exam Access",
+    description: "Grant exam access to students with outstanding fees",
+  },
 };
 
 type AddForm = {
@@ -111,6 +153,7 @@ type AddForm = {
   staffRole: string;
   permissions: StaffPermissions;
   password: string;
+  subjects: SubjectEntry[];
 };
 
 type EditForm = {
@@ -119,6 +162,7 @@ type EditForm = {
   staffRole: string;
   permissions: StaffPermissions;
   newPassword: string;
+  subjects: SubjectEntry[];
 };
 
 type StaffItem = {
@@ -221,7 +265,9 @@ export default function AdminStaff() {
     staffRole: "teacher",
     permissions: ROLE_PRESETS.teacher.permissions,
     password: "staff123",
+    subjects: [],
   });
+  const [addSubjectInput, setAddSubjectInput] = useState({ subject: "", section: "junior" as "junior" | "senior" });
 
   const [editForm, setEditForm] = useState<EditForm>({
     name: "",
@@ -229,7 +275,9 @@ export default function AdminStaff() {
     staffRole: "teacher",
     permissions: ROLE_PRESETS.teacher.permissions,
     newPassword: "",
+    subjects: [],
   });
+  const [editSubjectInput, setEditSubjectInput] = useState({ subject: "", section: "junior" as "junior" | "senior" });
 
   const filtered = (staff ?? []).filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -240,13 +288,13 @@ export default function AdminStaff() {
 
   function openEdit(s: StaffItem) {
     setEditStaff(s);
-    setEditForm({
-      name: s.name,
-      subject: s.subject,
-      staffRole: s.staffRole,
-      permissions: s.permissions,
-      newPassword: "",
-    });
+    setEditForm({ name: s.name, subject: s.subject, staffRole: s.staffRole, permissions: s.permissions, newPassword: "", subjects: [] });
+    // Fetch current subjects for this staff member
+    apiFetch(`/admin/staff/${s.staffId}/subjects`)
+      .then((subs: Array<{ subject: string; section: string }>) =>
+        setEditForm(f => ({ ...f, subjects: subs.map(x => ({ subject: x.subject, section: x.section as "junior" | "senior" })) }))
+      )
+      .catch(() => {});
   }
 
   function handleAdd() {
@@ -266,11 +314,19 @@ export default function AdminStaff() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Save subjects if any were added
+          if (addForm.subjects.length > 0) {
+            await apiFetch(`/admin/staff/${addForm.staffId}/subjects`, {
+              method: "POST",
+              body: JSON.stringify({ subjects: addForm.subjects }),
+            }).catch(() => {});
+          }
           toast({ title: "Staff member created successfully" });
           qc.invalidateQueries({ queryKey: getGetAdminStaffQueryKey() });
           setShowAdd(false);
-          setAddForm({ staffId: "", name: "", subject: "", staffRole: "teacher", permissions: ROLE_PRESETS.teacher.permissions, password: "staff123" });
+          setAddForm({ staffId: "", name: "", subject: "", staffRole: "teacher", permissions: ROLE_PRESETS.teacher.permissions, password: "staff123", subjects: [] });
+          setAddSubjectInput({ subject: "", section: "junior" });
         },
         onError: (e: any) =>
           toast({ variant: "destructive", title: "Error", description: e.data?.error || "Failed to create staff member" }),
@@ -295,7 +351,12 @@ export default function AdminStaff() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Save subjects
+          await apiFetch(`/admin/staff/${editStaff!.staffId}/subjects`, {
+            method: "POST",
+            body: JSON.stringify({ subjects: editForm.subjects }),
+          }).catch(() => {});
           toast({ title: "Staff member updated successfully" });
           qc.invalidateQueries({ queryKey: getGetAdminStaffQueryKey() });
           setEditStaff(null);
@@ -527,6 +588,53 @@ export default function AdminStaff() {
               permissions={addForm.permissions}
               onChange={p => setAddForm(f => ({ ...f, permissions: p }))}
             />
+
+            {/* Subjects section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5 text-muted-foreground" />Teaching Subjects (optional)</Label>
+              <div className="flex gap-2">
+                <Select value={addSubjectInput.section} onValueChange={v => setAddSubjectInput(s => ({ ...s, section: v as "junior" | "senior" }))}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="junior">Junior</SelectItem>
+                    <SelectItem value="senior">Senior</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  className="flex-1"
+                  value={addSubjectInput.subject}
+                  onChange={e => setAddSubjectInput(s => ({ ...s, subject: e.target.value }))}
+                  placeholder="Subject name…"
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && addSubjectInput.subject.trim()) {
+                      e.preventDefault();
+                      setAddForm(f => ({ ...f, subjects: [...f.subjects, { subject: addSubjectInput.subject.trim(), section: addSubjectInput.section }] }));
+                      setAddSubjectInput(s => ({ ...s, subject: "" }));
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm"
+                  disabled={!addSubjectInput.subject.trim()}
+                  onClick={() => {
+                    setAddForm(f => ({ ...f, subjects: [...f.subjects, { subject: addSubjectInput.subject.trim(), section: addSubjectInput.section }] }));
+                    setAddSubjectInput(s => ({ ...s, subject: "" }));
+                  }}>
+                  Add
+                </Button>
+              </div>
+              {addForm.subjects.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {addForm.subjects.map((s, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1 pr-1">
+                      <span className="capitalize text-xs text-muted-foreground mr-0.5">{s.section}</span>{s.subject}
+                      <button type="button" onClick={() => setAddForm(f => ({ ...f, subjects: f.subjects.filter((_, j) => j !== i) }))} className="ml-0.5 rounded-sm hover:bg-slate-200 p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
@@ -585,6 +693,53 @@ export default function AdminStaff() {
               permissions={editForm.permissions}
               onChange={p => setEditForm(f => ({ ...f, permissions: p }))}
             />
+            {/* Subjects section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5 text-muted-foreground" />Teaching Subjects</Label>
+              <div className="flex gap-2">
+                <Select value={editSubjectInput.section} onValueChange={v => setEditSubjectInput(s => ({ ...s, section: v as "junior" | "senior" }))}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="junior">Junior</SelectItem>
+                    <SelectItem value="senior">Senior</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  className="flex-1"
+                  value={editSubjectInput.subject}
+                  onChange={e => setEditSubjectInput(s => ({ ...s, subject: e.target.value }))}
+                  placeholder="Subject name…"
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && editSubjectInput.subject.trim()) {
+                      e.preventDefault();
+                      setEditForm(f => ({ ...f, subjects: [...f.subjects, { subject: editSubjectInput.subject.trim(), section: editSubjectInput.section }] }));
+                      setEditSubjectInput(s => ({ ...s, subject: "" }));
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm"
+                  disabled={!editSubjectInput.subject.trim()}
+                  onClick={() => {
+                    setEditForm(f => ({ ...f, subjects: [...f.subjects, { subject: editSubjectInput.subject.trim(), section: editSubjectInput.section }] }));
+                    setEditSubjectInput(s => ({ ...s, subject: "" }));
+                  }}>
+                  Add
+                </Button>
+              </div>
+              {editForm.subjects.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {editForm.subjects.map((s, i) => (
+                    <Badge key={i} variant="secondary" className="gap-1 pr-1">
+                      <span className="capitalize text-xs text-muted-foreground mr-0.5">{s.section}</span>{s.subject}
+                      <button type="button" onClick={() => setEditForm(f => ({ ...f, subjects: f.subjects.filter((_, j) => j !== i) }))} className="ml-0.5 rounded-sm hover:bg-slate-200 p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div>
               <Label>New Password <span className="text-muted-foreground font-normal">(leave blank to keep current)</span></Label>
               <Input
