@@ -16,6 +16,7 @@ import StudentResults from "@/pages/student/results";
 import TeachersDirectory from "@/pages/student/teachers-directory";
 import StudentsDirectory from "@/pages/student/students-directory";
 import StudentProfile from "@/pages/student/profile";
+import StudentBursary from "@/pages/student/bursary";
 import TeacherProfile from "@/pages/teacher/profile";
 import StaffDashboard from "@/pages/teacher/dashboard";
 import StaffExams from "@/pages/teacher/exams";
@@ -52,6 +53,7 @@ function Router() {
       <ProtectedRoute path="/student/teachers" role="student" component={TeachersDirectory} />
       <ProtectedRoute path="/student/directory" role="student" component={StudentsDirectory} />
       <ProtectedRoute path="/student/profile" role="student" component={StudentProfile} />
+      <ProtectedRoute path="/student/bursary" role="student" component={StudentBursary} />
 
       {/* Staff Routes */}
       <ProtectedRoute path="/teacher/dashboard" role="staff" component={StaffDashboard} />

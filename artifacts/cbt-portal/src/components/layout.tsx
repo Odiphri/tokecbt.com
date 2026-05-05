@@ -96,6 +96,14 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/student/bursary"}>
+                      <Link href="/student/bursary">
+                        <DollarSign />
+                        <span>My Fees</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/student/profile"}>
                       <Link href="/student/profile">
                         <UserCircle />

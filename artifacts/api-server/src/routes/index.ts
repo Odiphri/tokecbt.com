@@ -9,6 +9,7 @@ import bursaryRouter from "./bursary";
 import directoryRouter from "./directory";
 import aiQuestionsRouter from "./ai-questions";
 import schoolSettingsRouter from "./school-settings";
+import teacherSubjectsRouter from "./teacher-subjects";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(bursaryRouter);
 router.use(directoryRouter);
 router.use(aiQuestionsRouter);
 router.use(schoolSettingsRouter);
+router.use(teacherSubjectsRouter);
 
 export default router;

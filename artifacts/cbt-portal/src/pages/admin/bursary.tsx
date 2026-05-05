@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, DollarSign, Search, ShieldCheck, Trash2, Plus } from "lucide-react";
+import { Loader2, DollarSign, Search, ShieldCheck, Trash2, Plus, ChevronDown, ChevronUp, Receipt, BookOpen } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const API_BASE = "/api";
 
@@ -28,11 +30,16 @@ async function apiFetch(path: string, options?: RequestInit) {
   return res.json();
 }
 
+function fmt(n: number) { return `₦${n.toLocaleString()}`; }
+
+type PaymentStatus = "paid" | "unpaid" | "partial";
+type FeeRecordStatus = "paid" | "unpaid" | "partial" | "waived";
+
 interface BursaryRecord {
   regNumber: string;
   name: string;
   class: string;
-  paymentStatus: "paid" | "unpaid" | "partial";
+  paymentStatus: PaymentStatus;
   amountPaid: number;
   notes: string | null;
   updatedBy: string | null;
@@ -50,25 +57,80 @@ interface Override {
   createdAt: string;
 }
 
+interface FeeType {
+  id: number;
+  name: string;
+  description: string | null;
+  amount: number;
+  isMandatory: boolean;
+  academicYear: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface StudentFeeRecord {
+  id: number;
+  feeTypeId: number;
+  feeName: string;
+  amountDue: number;
+  amountPaid: number;
+  status: FeeRecordStatus;
+  dueDate: string | null;
+  notes: string | null;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+interface StudentFeeRow {
+  regNumber: string;
+  name: string;
+  class: string;
+  totalDue: number;
+  totalPaid: number;
+  balance: number;
+  fees: StudentFeeRecord[];
+}
+
 function statusBadge(status: string) {
   if (status === "paid") return <Badge className="bg-green-100 text-green-700 border-green-300 hover:bg-green-100">Paid</Badge>;
   if (status === "partial") return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-100">Partial</Badge>;
+  if (status === "waived") return <Badge className="bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100">Waived</Badge>;
   return <Badge className="bg-red-100 text-red-700 border-red-300 hover:bg-red-100">Unpaid</Badge>;
 }
 
+type Tab = "payments" | "fees" | "student-fees" | "overrides";
+
 export default function BursaryPage() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<Tab>("payments");
+
+  // ── Payments (legacy) ──
   const [records, setRecords] = useState<BursaryRecord[]>([]);
   const [overrides, setOverrides] = useState<Override[]>([]);
+  const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+  const [studentFees, setStudentFees] = useState<StudentFeeRow[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"payments" | "overrides">("payments");
 
   const [editRecord, setEditRecord] = useState<BursaryRecord | null>(null);
-  const [editStatus, setEditStatus] = useState<"paid" | "unpaid" | "partial">("unpaid");
+  const [editStatus, setEditStatus] = useState<PaymentStatus>("unpaid");
   const [editNotes, setEditNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // ── Fee types ──
+  const [showFeeModal, setShowFeeModal] = useState(false);
+  const [editFee, setEditFee] = useState<FeeType | null>(null);
+  const [feeForm, setFeeForm] = useState({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "" });
+  const [isSavingFee, setIsSavingFee] = useState(false);
+  const [applyingFeeId, setApplyingFeeId] = useState<number | null>(null);
+
+  // ── Student fee record edit ──
+  const [editFeeRecord, setEditFeeRecord] = useState<{ record: StudentFeeRecord; studentName: string } | null>(null);
+  const [feeRecordForm, setFeeRecordForm] = useState({ amountPaid: 0, status: "unpaid" as FeeRecordStatus, notes: "", dueDate: "" });
+  const [isSavingRecord, setIsSavingRecord] = useState(false);
+  const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
+
+  // ── Override modal ──
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideStudentReg, setOverrideStudentReg] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
@@ -80,12 +142,16 @@ export default function BursaryPage() {
   async function loadData() {
     setIsLoading(true);
     try {
-      const [bursary, ovr] = await Promise.all([
+      const [bursary, ovr, fees, sf] = await Promise.all([
         apiFetch("/admin/bursary"),
         apiFetch("/admin/bursary/overrides"),
+        apiFetch("/admin/bursary/fees"),
+        apiFetch("/admin/bursary/student-fees"),
       ]);
       setRecords(bursary);
       setOverrides(ovr);
+      setFeeTypes(fees);
+      setStudentFees(sf);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to load bursary data", description: err.message });
     } finally {
@@ -123,17 +189,11 @@ export default function BursaryPage() {
     try {
       await apiFetch("/teacher/bursary/override", {
         method: "POST",
-        body: JSON.stringify({
-          studentReg: overrideStudentReg,
-          reason: overrideReason,
-          expiresAt: overrideExpiry || undefined,
-        }),
+        body: JSON.stringify({ studentReg: overrideStudentReg, reason: overrideReason, expiresAt: overrideExpiry || undefined }),
       });
       toast({ title: "Override granted successfully" });
       setShowOverrideModal(false);
-      setOverrideStudentReg("");
-      setOverrideReason("");
-      setOverrideExpiry("");
+      setOverrideStudentReg(""); setOverrideReason(""); setOverrideExpiry("");
       loadData();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to create override", description: err.message });
@@ -153,23 +213,114 @@ export default function BursaryPage() {
     }
   }
 
+  function openFeeModal(fee?: FeeType) {
+    if (fee) {
+      setEditFee(fee);
+      setFeeForm({ name: fee.name, description: fee.description ?? "", amount: fee.amount, isMandatory: fee.isMandatory, academicYear: fee.academicYear });
+    } else {
+      setEditFee(null);
+      setFeeForm({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "" });
+    }
+    setShowFeeModal(true);
+  }
+
+  async function saveFeeType() {
+    if (!feeForm.name) return;
+    setIsSavingFee(true);
+    try {
+      if (editFee) {
+        await apiFetch(`/admin/bursary/fees/${editFee.id}`, { method: "PUT", body: JSON.stringify(feeForm) });
+        toast({ title: "Fee type updated" });
+      } else {
+        await apiFetch("/admin/bursary/fees", { method: "POST", body: JSON.stringify(feeForm) });
+        toast({ title: "Fee type created" });
+      }
+      setShowFeeModal(false);
+      loadData();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed", description: err.message });
+    } finally {
+      setIsSavingFee(false);
+    }
+  }
+
+  async function deleteFeeType(id: number) {
+    if (!confirm("Delete this fee type? This will also remove all associated student records.")) return;
+    try {
+      await apiFetch(`/admin/bursary/fees/${id}`, { method: "DELETE" });
+      toast({ title: "Fee type deleted" });
+      loadData();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed", description: err.message });
+    }
+  }
+
+  async function applyFeeToAll(id: number, name: string) {
+    if (!confirm(`Apply "${name}" to all students? Students already assigned this fee will not be duplicated.`)) return;
+    setApplyingFeeId(id);
+    try {
+      const result = await apiFetch(`/admin/bursary/fees/${id}/apply`, { method: "POST" });
+      toast({ title: "Fee applied", description: `Applied to ${result.applied} new students. ${result.alreadyExisted} already had this fee.` });
+      loadData();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed", description: err.message });
+    } finally {
+      setApplyingFeeId(null);
+    }
+  }
+
+  function openFeeRecordEdit(record: StudentFeeRecord, studentName: string) {
+    setEditFeeRecord({ record, studentName });
+    setFeeRecordForm({ amountPaid: record.amountPaid, status: record.status, notes: record.notes ?? "", dueDate: record.dueDate ?? "" });
+  }
+
+  async function saveFeeRecord() {
+    if (!editFeeRecord) return;
+    setIsSavingRecord(true);
+    try {
+      await apiFetch(`/admin/bursary/student-fees/${editFeeRecord.record.id}`, {
+        method: "PUT",
+        body: JSON.stringify(feeRecordForm),
+      });
+      toast({ title: "Fee record updated" });
+      setEditFeeRecord(null);
+      loadData();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed", description: err.message });
+    } finally {
+      setIsSavingRecord(false);
+    }
+  }
+
   const filtered = records.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
     r.regNumber.toLowerCase().includes(search.toLowerCase()) ||
     r.class.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredStudentFees = studentFees.filter(r =>
+    r.name.toLowerCase().includes(search.toLowerCase()) ||
+    r.regNumber.toLowerCase().includes(search.toLowerCase())
   );
 
   const paidCount = records.filter(r => r.paymentStatus === "paid").length;
   const partialCount = records.filter(r => r.paymentStatus === "partial").length;
   const unpaidCount = records.filter(r => r.paymentStatus === "unpaid").length;
 
+  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "payments", label: "Payment Status", icon: <DollarSign className="h-4 w-4 inline mr-1" /> },
+    { id: "fees", label: "Fee Structure", icon: <BookOpen className="h-4 w-4 inline mr-1" /> },
+    { id: "student-fees", label: "Student Fees", icon: <Receipt className="h-4 w-4 inline mr-1" /> },
+    { id: "overrides", label: `Overrides (${overrides.length})`, icon: <ShieldCheck className="h-4 w-4 inline mr-1" /> },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary">Bursary</h1>
-        <p className="text-muted-foreground mt-1">Manage student payment status and exam access overrides.</p>
+        <p className="text-muted-foreground mt-1">Manage school fees, student payments and exam access overrides.</p>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="border-t-4 border-t-green-500">
           <CardContent className="pt-4">
@@ -191,44 +342,34 @@ export default function BursaryPage() {
         </Card>
       </div>
 
-      <div className="flex gap-2 border-b">
-        <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "payments" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          onClick={() => setActiveTab("payments")}
-        >
-          <DollarSign className="h-4 w-4 inline mr-1" />
-          Payments
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "overrides" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          onClick={() => setActiveTab("overrides")}
-        >
-          <ShieldCheck className="h-4 w-4 inline mr-1" />
-          Overrides ({overrides.length})
-        </button>
+      {/* Tabs */}
+      <div className="flex gap-0 border-b overflow-x-auto">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.icon}{t.label}
+          </button>
+        ))}
       </div>
 
+      {/* ── Payment Status tab ── */}
       {activeTab === "payments" && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <CardTitle>Student Payments</CardTitle>
+              <CardTitle>Student Payment Status</CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-9 w-64"
-                  placeholder="Search students..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
+                <Input className="pl-9 w-64" placeholder="Search students..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
             ) : (
               <div className="space-y-2">
                 {filtered.map(rec => (
@@ -251,6 +392,148 @@ export default function BursaryPage() {
         </Card>
       )}
 
+      {/* ── Fee Structure tab ── */}
+      {activeTab === "fees" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Fee Structure</CardTitle>
+                <CardDescription>Create and manage the school fee categories for each academic year.</CardDescription>
+              </div>
+              <Button onClick={() => openFeeModal()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Fee
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+            ) : feeTypes.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground border border-dashed rounded-lg">
+                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p>No fee types created yet.</p>
+                <p className="text-sm mt-1">Click "Add Fee" to create your first fee category.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {feeTypes.map(fee => (
+                  <div key={fee.id} className="p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">{fee.name}</span>
+                          <span className="font-bold text-primary">{fmt(fee.amount)}</span>
+                          {fee.isMandatory ? (
+                            <Badge className="bg-red-100 text-red-700 border-red-300 hover:bg-red-100 text-xs">Mandatory</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-500 text-xs">Optional</Badge>
+                          )}
+                          {fee.academicYear && <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">{fee.academicYear}</Badge>}
+                        </div>
+                        {fee.description && <p className="text-sm text-muted-foreground">{fee.description}</p>}
+                        <p className="text-xs text-muted-foreground">Created by {fee.createdBy}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => applyFeeToAll(fee.id, fee.name)}
+                          disabled={applyingFeeId === fee.id}
+                        >
+                          {applyingFeeId === fee.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                          Apply to All
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => openFeeModal(fee)}>Edit</Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteFeeType(fee.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Student Fees tab ── */}
+      {activeTab === "student-fees" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle>Student Fee Records</CardTitle>
+                <CardDescription>Per-student breakdown of all assigned fees and payment progress.</CardDescription>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input className="pl-9 w-64" placeholder="Search students..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+            ) : filteredStudentFees.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground border border-dashed rounded-lg">
+                No student fee records found. Create fee types and apply them to students first.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredStudentFees.map(s => (
+                  <div key={s.regNumber} className="border rounded-lg overflow-hidden">
+                    <button
+                      className="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors text-left"
+                      onClick={() => setExpandedStudent(expandedStudent === s.regNumber ? null : s.regNumber)}
+                    >
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-medium">{s.name}</span>
+                        <Badge variant="outline" className="text-xs">{s.class}</Badge>
+                        <span className="text-sm text-muted-foreground">Due: <span className="text-foreground font-medium">{fmt(s.totalDue)}</span></span>
+                        <span className="text-sm text-muted-foreground">Paid: <span className="text-green-600 font-medium">{fmt(s.totalPaid)}</span></span>
+                        {s.balance > 0 ? (
+                          <span className="text-sm font-semibold text-red-600">Balance: {fmt(s.balance)}</span>
+                        ) : s.totalDue > 0 ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-300 hover:bg-green-100 text-xs">Cleared</Badge>
+                        ) : null}
+                      </div>
+                      {expandedStudent === s.regNumber ? <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                    </button>
+                    {expandedStudent === s.regNumber && s.fees.length > 0 && (
+                      <div className="border-t bg-slate-50 divide-y">
+                        {s.fees.map(fee => (
+                          <div key={fee.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white transition-colors">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">{fee.feeName}</span>
+                                {statusBadge(fee.status)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Due: {fmt(fee.amountDue)} · Paid: {fmt(fee.amountPaid)}
+                                {(fee.amountDue - fee.amountPaid) > 0 && ` · Balance: ${fmt(fee.amountDue - fee.amountPaid)}`}
+                              </div>
+                              {fee.notes && <p className="text-xs text-muted-foreground italic">{fee.notes}</p>}
+                            </div>
+                            <Button size="sm" variant="outline" className="flex-shrink-0" onClick={() => openFeeRecordEdit(fee, s.name)}>
+                              Record Payment
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Overrides tab ── */}
       {activeTab === "overrides" && (
         <Card>
           <CardHeader>
@@ -267,9 +550,7 @@ export default function BursaryPage() {
           </CardHeader>
           <CardContent>
             {overrides.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                No overrides have been granted.
-              </div>
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">No overrides have been granted.</div>
             ) : (
               <div className="space-y-2">
                 {overrides.map(o => (
@@ -296,19 +577,16 @@ export default function BursaryPage() {
         </Card>
       )}
 
+      {/* ── Edit payment dialog ── */}
       {editRecord && (
         <Dialog open={!!editRecord} onOpenChange={() => setEditRecord(null)}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Update Payment — {editRecord.name}</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Update Payment — {editRecord.name}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Payment Status</label>
-                <Select value={editStatus} onValueChange={v => setEditStatus(v as any)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Payment Status</Label>
+                <Select value={editStatus} onValueChange={v => setEditStatus(v as PaymentStatus)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="partial">Partial</SelectItem>
@@ -317,45 +595,131 @@ export default function BursaryPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium">Notes (optional)</label>
-                <Textarea className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Any notes about this payment..." />
+                <Label>Notes (optional)</Label>
+                <Textarea className="mt-1" value={editNotes} onChange={e => setEditNotes(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditRecord(null)}>Cancel</Button>
               <Button onClick={savePayment} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
-      <Dialog open={showOverrideModal} onOpenChange={setShowOverrideModal}>
+      {/* ── Fee type modal ── */}
+      <Dialog open={showFeeModal} onOpenChange={setShowFeeModal}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Grant Exam Access Override</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editFee ? "Edit Fee Type" : "Create Fee Type"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Student Reg. Number</label>
+              <Label>Fee Name *</Label>
+              <Input className="mt-1" value={feeForm.name} onChange={e => setFeeForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. School Fees, Development Levy…" />
+            </div>
+            <div>
+              <Label>Description (optional)</Label>
+              <Textarea className="mt-1" value={feeForm.description} onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of this fee…" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Amount (₦) *</Label>
+                <Input className="mt-1" type="number" min={0} value={feeForm.amount} onChange={e => setFeeForm(f => ({ ...f, amount: parseInt(e.target.value) || 0 }))} />
+              </div>
+              <div>
+                <Label>Academic Year</Label>
+                <Input className="mt-1" value={feeForm.academicYear} onChange={e => setFeeForm(f => ({ ...f, academicYear: e.target.value }))} placeholder="e.g. 2024/2025" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox id="mandatory" checked={feeForm.isMandatory} onCheckedChange={v => setFeeForm(f => ({ ...f, isMandatory: !!v }))} />
+              <div>
+                <label htmlFor="mandatory" className="text-sm font-medium cursor-pointer">Mandatory fee</label>
+                <p className="text-xs text-muted-foreground">Mandatory fees block exam access if unpaid</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFeeModal(false)}>Cancel</Button>
+            <Button onClick={saveFeeType} disabled={isSavingFee || !feeForm.name}>
+              {isSavingFee && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editFee ? "Save Changes" : "Create Fee"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Fee record edit dialog ── */}
+      {editFeeRecord && (
+        <Dialog open={!!editFeeRecord} onOpenChange={() => setEditFeeRecord(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record Payment — {editFeeRecord.studentName}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-md text-sm">
+                <span className="font-medium">{editFeeRecord.record.feeName}</span>
+                <span className="text-muted-foreground ml-2">Amount due: {fmt(editFeeRecord.record.amountDue)}</span>
+              </div>
+              <div>
+                <Label>Amount Paid (₦)</Label>
+                <Input className="mt-1" type="number" min={0} max={editFeeRecord.record.amountDue} value={feeRecordForm.amountPaid}
+                  onChange={e => setFeeRecordForm(f => ({ ...f, amountPaid: parseInt(e.target.value) || 0 }))} />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={feeRecordForm.status} onValueChange={v => setFeeRecordForm(f => ({ ...f, status: v as FeeRecordStatus }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">Paid in full</SelectItem>
+                    <SelectItem value="partial">Partial payment</SelectItem>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="waived">Waived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Due Date (optional)</Label>
+                <Input type="date" className="mt-1" value={feeRecordForm.dueDate} onChange={e => setFeeRecordForm(f => ({ ...f, dueDate: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Notes (optional)</Label>
+                <Textarea className="mt-1" value={feeRecordForm.notes} onChange={e => setFeeRecordForm(f => ({ ...f, notes: e.target.value }))} placeholder="e.g. paid via POS, receipt no. 12345" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditFeeRecord(null)}>Cancel</Button>
+              <Button onClick={saveFeeRecord} disabled={isSavingRecord}>
+                {isSavingRecord && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Payment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── Override modal ── */}
+      <Dialog open={showOverrideModal} onOpenChange={setShowOverrideModal}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Grant Exam Access Override</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Student Reg. Number</Label>
               <Input className="mt-1" value={overrideStudentReg} onChange={e => setOverrideStudentReg(e.target.value)} placeholder="e.g. STU001" />
             </div>
             <div>
-              <label className="text-sm font-medium">Reason</label>
-              <Textarea className="mt-1" value={overrideReason} onChange={e => setOverrideReason(e.target.value)} placeholder="Reason for granting access..." />
+              <Label>Reason</Label>
+              <Textarea className="mt-1" value={overrideReason} onChange={e => setOverrideReason(e.target.value)} placeholder="Reason for granting access…" />
             </div>
             <div>
-              <label className="text-sm font-medium">Expiry Date (optional)</label>
+              <Label>Expiry Date (optional)</Label>
               <Input type="date" className="mt-1" value={overrideExpiry} onChange={e => setOverrideExpiry(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowOverrideModal(false)}>Cancel</Button>
             <Button onClick={createOverride} disabled={isOverriding || !overrideStudentReg || !overrideReason}>
-              {isOverriding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Grant Override
+              {isOverriding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Grant Override
             </Button>
           </DialogFooter>
         </DialogContent>

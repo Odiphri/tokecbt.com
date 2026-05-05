@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useCreateQuestion, useUpdateQuestion, getGetExamQuestionsQueryKey } from "@workspace/api-client-react";
@@ -12,11 +12,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import RichTextEditor from "@/components/rich-text-editor";
 
 const schema = z.object({
   questionText: z.string().min(1, "Question text is required"),
@@ -94,6 +94,7 @@ export default function QuestionForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Rich text question editor */}
         <FormField
           control={form.control}
           name="questionText"
@@ -101,7 +102,17 @@ export default function QuestionForm({
             <FormItem>
               <FormLabel>Question Text</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter the question here..." className="min-h-[100px]" {...field} />
+                <Controller
+                  control={form.control}
+                  name="questionText"
+                  render={({ field: cf }) => (
+                    <RichTextEditor
+                      value={cf.value}
+                      onChange={cf.onChange}
+                      placeholder="Enter the question here… Use the toolbar to bold, italicise, underline, or insert an image."
+                    />
+                  )}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -109,58 +120,22 @@ export default function QuestionForm({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="optionA"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Option A</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="optionB"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Option B</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="optionC"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Option C</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="optionD"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Option D</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {(["A", "B", "C", "D"] as const).map(opt => (
+            <FormField
+              key={opt}
+              control={form.control}
+              name={`option${opt}` as keyof z.infer<typeof schema>}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Option {opt}</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
         </div>
 
         <FormField

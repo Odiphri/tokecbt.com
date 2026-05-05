@@ -232,9 +232,10 @@ export default function StudentExam() {
                 <span className={cn(isAllAnswered ? "text-green-600" : "")}>{answeredCount} Answered</span>
               </div>
               
-              <h2 className="text-xl md:text-2xl font-medium mb-8 leading-relaxed">
-                {currentQuestion.questionText}
-              </h2>
+              <div
+                className="text-xl md:text-2xl font-medium mb-8 leading-relaxed prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: currentQuestion.questionText }}
+              />
 
               <div className="space-y-3 mt-auto">
                 {(['A', 'B', 'C', 'D'] as const).map((opt) => {
