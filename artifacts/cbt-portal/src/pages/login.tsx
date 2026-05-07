@@ -72,7 +72,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-pink-50 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center justify-center space-y-2 text-primary">
           <BookOpen className="h-12 w-12" />

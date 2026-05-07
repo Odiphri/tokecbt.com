@@ -31,6 +31,7 @@ const CreateFeeTypeBody = z.object({
   amount: z.number().int().min(0),
   isMandatory: z.boolean().default(true),
   academicYear: z.string().default(""),
+  targetClass: z.string().optional().nullable(),
 });
 
 const UpdateFeeRecordBody = z.object({
@@ -203,6 +204,7 @@ router.post("/admin/bursary/fees", requireAuth, requireRole("admin", "staff"), a
     amount: body.data.amount,
     isMandatory: body.data.isMandatory,
     academicYear: body.data.academicYear,
+    targetClass: body.data.targetClass ?? null,
     createdBy: req.user!.name ?? req.user!.id,
   }).returning();
   res.status(201).json(fee);
@@ -225,6 +227,7 @@ router.put("/admin/bursary/fees/:id", requireAuth, requireRole("admin", "staff")
     amount: body.data.amount,
     isMandatory: body.data.isMandatory,
     academicYear: body.data.academicYear,
+    targetClass: body.data.targetClass ?? null,
   }).where(eq(feeTypesTable.id, id));
 
   res.json({ success: true });
@@ -259,6 +262,7 @@ router.post("/admin/bursary/fees/:id/apply", requireAuth, requireRole("admin", "
 
   const toInsert = students
     .filter(s => !existingRegs.has(s.regNumber))
+    .filter(s => !feeType.targetClass || s.class === feeType.targetClass)
     .map(s => ({
       studentReg: s.regNumber,
       feeTypeId: id,
@@ -272,6 +276,28 @@ router.post("/admin/bursary/fees/:id/apply", requireAuth, requireRole("admin", "
   }
 
   res.json({ success: true, applied: toInsert.length, alreadyExisted: existingRegs.size });
+});
+
+// Delete a student fee record (only allowed for optional/non-mandatory fees)
+router.delete("/admin/bursary/student-fees/:id", requireAuth, requireRole("admin", "staff"), async (req, res): Promise<void> => {
+  if (!canManageBursary(req)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid record ID" }); return; }
+
+  const [record] = await db.select().from(studentFeeRecordsTable).where(eq(studentFeeRecordsTable.id, id));
+  if (!record) { res.status(404).json({ error: "Record not found" }); return; }
+
+  const [feeType] = await db.select().from(feeTypesTable).where(eq(feeTypesTable.id, record.feeTypeId));
+  if (feeType?.isMandatory) {
+    res.status(400).json({ error: "Cannot remove mandatory fee records from individual students" });
+    return;
+  }
+
+  await db.delete(studentFeeRecordsTable).where(eq(studentFeeRecordsTable.id, id));
+  res.json({ success: true });
 });
 
 // ─── Student Fee Records (per-student breakdown) ───────────────────────────────

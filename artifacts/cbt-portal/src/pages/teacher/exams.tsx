@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Users, Eye, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Users, Eye, Trash2, ArrowLeft, Radio } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,6 +32,7 @@ export default function TeacherExams() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; subject: string } | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [togglingLiveId, setTogglingLiveId] = useState<number | null>(null);
 
   const canViewAll = user?.role === "admin" || !!user?.permissions?.view_all_exams;
   const canManageExams = user?.role === "admin" || !!user?.permissions?.manage_exams;
@@ -63,6 +64,26 @@ export default function TeacherExams() {
         onSettled: () => setTogglingId(null),
       }
     );
+  }
+
+  async function handleToggleLive(examId: number, currentLive: boolean) {
+    setTogglingLiveId(examId);
+    const token = localStorage.getItem("cbt_token");
+    try {
+      const res = await fetch(`/api/teacher/exams/${examId}/toggle-live`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ live: !currentLive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      toast({ title: !currentLive ? "Exam published — students can now see it" : "Exam taken offline" });
+      qc.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally {
+      setTogglingLiveId(null);
+    }
   }
 
   return (
@@ -127,6 +148,7 @@ export default function TeacherExams() {
                   <TableHead>Questions</TableHead>
                   <TableHead>Attempts</TableHead>
                   <TableHead>Avg Score</TableHead>
+                  <TableHead>Published</TableHead>
                   <TableHead>Results Visible</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -146,6 +168,18 @@ export default function TeacherExams() {
                       <TableCell>{exam.attemptCount}</TableCell>
                       <TableCell>
                         {exam.averageScore != null ? `${exam.averageScore.toFixed(1)}%` : "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={(exam as any).isLive ?? false}
+                            disabled={!canEdit || togglingLiveId === exam.id}
+                            onCheckedChange={() => handleToggleLive(exam.id, (exam as any).isLive ?? false)}
+                          />
+                          <Badge variant={(exam as any).isLive ? "default" : "secondary"} className={`text-xs ${(exam as any).isLive ? "bg-green-600 hover:bg-green-700" : ""}`}>
+                            {(exam as any).isLive ? "Live" : "Offline"}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

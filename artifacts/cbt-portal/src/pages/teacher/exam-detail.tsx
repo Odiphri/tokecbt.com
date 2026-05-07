@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings, Sparkles, Radio, WifiOff } from "lucide-react";
 import QuestionForm from "./question-form";
 import {
   AlertDialog,
@@ -66,6 +66,7 @@ export default function ExamDetail() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showDeleteExam, setShowDeleteExam] = useState(false);
 
+  const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiTopics, setAiTopics] = useState("");
   const [aiCount, setAiCount] = useState("10");
@@ -103,6 +104,25 @@ export default function ExamDetail() {
         setShowDeleteExam(false);
       }
     });
+  }
+
+  async function handleToggleLive() {
+    if (!exam) return;
+    setIsTogglingLive(true);
+    try {
+      const newLive = !(exam as any).isLive;
+      await apiFetch(`/teacher/exams/${id}/toggle-live`, {
+        method: "PATCH",
+        body: JSON.stringify({ live: newLive }),
+      });
+      toast({ title: newLive ? "Exam published — students can now see it" : "Exam taken offline" });
+      queryClient.invalidateQueries({ queryKey: getGetTeacherExamsQueryKey() });
+      // Reload to refresh exam data
+      window.location.reload();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to update live status", description: err.message });
+      setIsTogglingLive(false);
+    }
   }
 
   const openNewForm = () => {
@@ -202,6 +222,23 @@ export default function ExamDetail() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {canManage && (
+            <Button
+              variant={(exam as any).isLive ? "outline" : "default"}
+              onClick={handleToggleLive}
+              disabled={isTogglingLive}
+              className={(exam as any).isLive
+                ? "border-orange-400 text-orange-700 hover:bg-orange-50"
+                : "bg-green-600 hover:bg-green-700 text-white"}
+            >
+              {isTogglingLive
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : (exam as any).isLive
+                  ? <WifiOff className="h-4 w-4 mr-2" />
+                  : <Radio className="h-4 w-4 mr-2" />}
+              {(exam as any).isLive ? "Take Offline" : "Publish Exam"}
+            </Button>
+          )}
           {canManage && (
             <Link href={`/teacher/exams/${id}/edit`}>
               <Button variant="outline">

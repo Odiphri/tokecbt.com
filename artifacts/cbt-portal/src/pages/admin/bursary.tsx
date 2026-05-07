@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, DollarSign, Search, ShieldCheck, Trash2, Plus, ChevronDown, ChevronUp, Receipt, BookOpen } from "lucide-react";
+import { Loader2, DollarSign, Search, ShieldCheck, Trash2, Plus, ChevronDown, ChevronUp, Receipt, BookOpen, X } from "lucide-react";
+import { CLASS_SECTIONS } from "@/lib/class-sections";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -64,6 +65,7 @@ interface FeeType {
   amount: number;
   isMandatory: boolean;
   academicYear: string;
+  targetClass: string | null;
   createdBy: string;
   createdAt: string;
 }
@@ -120,7 +122,7 @@ export default function BursaryPage() {
   // ── Fee types ──
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [editFee, setEditFee] = useState<FeeType | null>(null);
-  const [feeForm, setFeeForm] = useState({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "" });
+  const [feeForm, setFeeForm] = useState({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "", targetClass: "" });
   const [isSavingFee, setIsSavingFee] = useState(false);
   const [applyingFeeId, setApplyingFeeId] = useState<number | null>(null);
 
@@ -216,10 +218,10 @@ export default function BursaryPage() {
   function openFeeModal(fee?: FeeType) {
     if (fee) {
       setEditFee(fee);
-      setFeeForm({ name: fee.name, description: fee.description ?? "", amount: fee.amount, isMandatory: fee.isMandatory, academicYear: fee.academicYear });
+      setFeeForm({ name: fee.name, description: fee.description ?? "", amount: fee.amount, isMandatory: fee.isMandatory, academicYear: fee.academicYear, targetClass: fee.targetClass ?? "" });
     } else {
       setEditFee(null);
-      setFeeForm({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "" });
+      setFeeForm({ name: "", description: "", amount: 0, isMandatory: true, academicYear: "", targetClass: "" });
     }
     setShowFeeModal(true);
   }
@@ -228,11 +230,12 @@ export default function BursaryPage() {
     if (!feeForm.name) return;
     setIsSavingFee(true);
     try {
+      const payload = { ...feeForm, targetClass: feeForm.targetClass || null };
       if (editFee) {
-        await apiFetch(`/admin/bursary/fees/${editFee.id}`, { method: "PUT", body: JSON.stringify(feeForm) });
+        await apiFetch(`/admin/bursary/fees/${editFee.id}`, { method: "PUT", body: JSON.stringify(payload) });
         toast({ title: "Fee type updated" });
       } else {
-        await apiFetch("/admin/bursary/fees", { method: "POST", body: JSON.stringify(feeForm) });
+        await apiFetch("/admin/bursary/fees", { method: "POST", body: JSON.stringify(payload) });
         toast({ title: "Fee type created" });
       }
       setShowFeeModal(false);
@@ -431,6 +434,7 @@ export default function BursaryPage() {
                             <Badge variant="outline" className="text-slate-500 text-xs">Optional</Badge>
                           )}
                           {fee.academicYear && <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">{fee.academicYear}</Badge>}
+                          {fee.targetClass && <Badge variant="outline" className="text-purple-600 border-purple-300 text-xs">{fee.targetClass}</Badge>}
                         </div>
                         {fee.description && <p className="text-sm text-muted-foreground">{fee.description}</p>}
                         <p className="text-xs text-muted-foreground">Created by {fee.createdBy}</p>
@@ -518,9 +522,31 @@ export default function BursaryPage() {
                               </div>
                               {fee.notes && <p className="text-xs text-muted-foreground italic">{fee.notes}</p>}
                             </div>
-                            <Button size="sm" variant="outline" className="flex-shrink-0" onClick={() => openFeeRecordEdit(fee, s.name)}>
-                              Record Payment
-                            </Button>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <Button size="sm" variant="outline" onClick={() => openFeeRecordEdit(fee, s.name)}>
+                                Record Payment
+                              </Button>
+                              {!feeTypes.find(ft => ft.id === fee.feeTypeId)?.isMandatory && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  title="Remove optional fee from this student"
+                                  onClick={async () => {
+                                    if (!confirm(`Remove "${fee.feeName}" from ${s.name}?`)) return;
+                                    try {
+                                      await apiFetch(`/admin/bursary/student-fees/${fee.id}`, { method: "DELETE" });
+                                      toast({ title: "Fee removed" });
+                                      loadData();
+                                    } catch (err: any) {
+                                      toast({ variant: "destructive", title: "Failed", description: err.message });
+                                    }
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -631,6 +657,20 @@ export default function BursaryPage() {
                 <Label>Academic Year</Label>
                 <Input className="mt-1" value={feeForm.academicYear} onChange={e => setFeeForm(f => ({ ...f, academicYear: e.target.value }))} placeholder="e.g. 2024/2025" />
               </div>
+            </div>
+            <div>
+              <Label>Target Class <span className="text-muted-foreground font-normal">(optional — leave blank to apply to all classes)</span></Label>
+              <Select value={feeForm.targetClass || "__all__"} onValueChange={v => setFeeForm(f => ({ ...f, targetClass: v === "__all__" ? "" : v }))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="All classes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All classes</SelectItem>
+                  {CLASS_SECTIONS.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-3">
               <Checkbox id="mandatory" checked={feeForm.isMandatory} onCheckedChange={v => setFeeForm(f => ({ ...f, isMandatory: !!v }))} />

@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, Loader2, User, BookOpen, School, Shield, Settings } from "lucide-react";
-import { Link } from "wouter";
+import { Camera, Loader2, User, BookOpen, School, Shield, Edit2, KeyRound, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const ROLE_LABELS: Record<string, string> = {
   teacher: "Teacher",
@@ -24,14 +26,33 @@ const ROLE_COLORS: Record<string, string> = {
   cbt_personnel: "bg-amber-100 text-amber-800 border-amber-300",
 };
 
+async function apiFetch(path: string, options?: RequestInit) {
+  const token = localStorage.getItem("cbt_token");
+  const res = await fetch(`/api${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options?.headers ?? {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Request failed");
+  return data;
+}
+
 export default function TeacherProfile() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const profilePicMutation = useUpdateProfilePicture();
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", newStaffId: "", currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!user) return null;
 
@@ -71,6 +92,41 @@ export default function TeacherProfile() {
       );
     };
     reader.readAsDataURL(file);
+  }
+
+  function openEditModal() {
+    if (!user) return;
+    setEditForm({ name: user.name ?? "", newStaffId: "", currentPassword: "", newPassword: "", confirmPassword: "" });
+    setShowEditModal(true);
+  }
+
+  async function saveProfile() {
+    if (editForm.newPassword && editForm.newPassword !== editForm.confirmPassword) {
+      toast({ variant: "destructive", title: "Passwords do not match" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string> = { name: editForm.name };
+      if (editForm.newStaffId.trim()) payload.newStaffId = editForm.newStaffId.trim();
+      if (editForm.newPassword) {
+        payload.currentPassword = editForm.currentPassword;
+        payload.newPassword = editForm.newPassword;
+      }
+      const result = await apiFetch("/teacher/my-profile", { method: "PUT", body: JSON.stringify(payload) });
+      toast({ title: "Profile updated successfully" });
+      setShowEditModal(false);
+      if (result.staffIdChanged) {
+        toast({ title: "Staff ID changed — please log in again", description: "You will be logged out now." });
+        setTimeout(() => logout(), 1500);
+      } else {
+        qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Update failed", description: err.message });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const perms = user.permissions;
@@ -121,12 +177,18 @@ export default function TeacherProfile() {
 
             {/* Info */}
             <div className="flex-1 space-y-4 text-center sm:text-left">
-              <div>
-                <h2 className="text-2xl font-bold text-primary">{user.name}</h2>
-                <Badge variant="outline" className={`mt-1 ${roleColor}`}>
-                  <Shield className="h-3 w-3 mr-1" />
-                  {roleLabel}
-                </Badge>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-2xl font-bold text-primary">{user.name}</h2>
+                  <Badge variant="outline" className={`mt-1 ${roleColor}`}>
+                    <Shield className="h-3 w-3 mr-1" />
+                    {roleLabel}
+                  </Badge>
+                </div>
+                <Button size="sm" variant="outline" onClick={openEditModal} className="flex-shrink-0">
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                  Edit
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -190,23 +252,60 @@ export default function TeacherProfile() {
         </Card>
       )}
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Account Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Link href="/settings">
-            <Button variant="outline">
-              <Settings className="mr-2 h-4 w-4" />
-              Change Password & Name
+      {/* Edit Profile Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Full Name</Label>
+              <Input className="mt-1" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Your full name" />
+            </div>
+            <div>
+              <Label>
+                New Staff ID
+                <span className="text-muted-foreground font-normal text-xs ml-2">(leave blank to keep current: {user.id})</span>
+              </Label>
+              <Input className="mt-1" value={editForm.newStaffId} onChange={e => setEditForm(f => ({ ...f, newStaffId: e.target.value }))} placeholder={user.id} />
+              {editForm.newStaffId.trim() && editForm.newStaffId.trim() !== user.id && (
+                <div className="flex items-start gap-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                  Changing your Staff ID will log you out immediately. You will need to log back in with the new ID.
+                </div>
+              )}
+            </div>
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+                <KeyRound className="h-4 w-4" />
+                Change Password (optional)
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label>Current Password</Label>
+                  <Input className="mt-1" type="password" value={editForm.currentPassword} onChange={e => setEditForm(f => ({ ...f, currentPassword: e.target.value }))} placeholder="Required only if setting a new password" />
+                </div>
+                <div>
+                  <Label>New Password</Label>
+                  <Input className="mt-1" type="password" value={editForm.newPassword} onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="At least 6 characters" />
+                </div>
+                <div>
+                  <Label>Confirm New Password</Label>
+                  <Input className="mt-1" type="password" value={editForm.confirmPassword} onChange={e => setEditForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder="Repeat new password" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={saveProfile} disabled={isSaving || !editForm.name.trim()}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
             </Button>
-          </Link>
-        </CardContent>
-      </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
