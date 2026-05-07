@@ -16,27 +16,8 @@ function canManageExams(user: Express.Request["user"]): boolean {
   return user?.role === "admin" || !!user?.permissions?.manage_exams;
 }
 
-router.post("/teacher/ai-questions", requireAuth, requireRole("staff", "admin"), async (req, res): Promise<void> => {
-  if (!canManageExams(req.user)) {
-    res.status(403).json({ error: "You do not have permission to generate questions" });
-    return;
-  }
-
-  const parsed = GenerateQuestionsBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    res.status(503).json({ error: "AI question generation is not configured. Please set OPENAI_API_KEY in your environment." });
-    return;
-  }
-
-  const { subject, topics, count, difficulty = "medium" } = parsed.data;
-
-  const prompt = `You are an expert ${subject} teacher creating a multiple-choice exam for secondary school students.
+function buildPrompt(subject: string, topics: string, count: number, difficulty: string): string {
+  return `You are an expert ${subject} teacher creating a multiple-choice exam for secondary school students.
 
 Generate exactly ${count} multiple-choice questions on the following topics: ${topics}.
 Difficulty level: ${difficulty}.
@@ -58,60 +39,128 @@ Return ONLY a valid JSON array in this exact format, no other text:
     "correctOption": "A"
   }
 ]`;
+}
+
+function parseQuestions(content: string, count: number) {
+  const parsed = JSON.parse(content);
+  const questions: any[] = Array.isArray(parsed) ? parsed : (parsed.questions ?? Object.values(parsed)[0] as any[]);
+  if (!Array.isArray(questions)) throw new Error("Not an array");
+  return questions.slice(0, count).map((q: any) => ({
+    questionText: String(q.questionText ?? ""),
+    optionA: String(q.optionA ?? ""),
+    optionB: String(q.optionB ?? ""),
+    optionC: String(q.optionC ?? ""),
+    optionD: String(q.optionD ?? ""),
+    correctOption: ["A", "B", "C", "D"].includes(q.correctOption) ? q.correctOption : "A",
+  })).filter((q: any) => q.questionText && q.optionA && q.optionB && q.optionC && q.optionD);
+}
+
+async function generateWithOpenAI(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenAI error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json() as any;
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("OpenAI returned empty response");
+  return content;
+}
+
+async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json() as any;
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error("Gemini returned empty response");
+  return content;
+}
+
+router.post("/teacher/ai-questions", requireAuth, requireRole("staff", "admin"), async (req, res): Promise<void> => {
+  if (!canManageExams(req.user)) {
+    res.status(403).json({ error: "You do not have permission to generate questions" });
+    return;
+  }
+
+  const parsed = GenerateQuestionsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (!openaiKey && !geminiKey) {
+    res.status(503).json({ error: "AI question generation is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY." });
+    return;
+  }
+
+  const { subject, topics, count, difficulty = "medium" } = parsed.data;
+  const prompt = buildPrompt(subject, topics, count, difficulty);
+
+  let content: string | null = null;
+  let usedProvider = "";
+
+  if (openaiKey) {
+    try {
+      content = await generateWithOpenAI(prompt, openaiKey);
+      usedProvider = "openai";
+    } catch (err) {
+      logger.warn({ err }, "OpenAI failed, falling back to Gemini");
+    }
+  }
+
+  if (!content && geminiKey) {
+    try {
+      content = await generateWithGemini(prompt, geminiKey);
+      usedProvider = "gemini";
+    } catch (err) {
+      logger.error({ err }, "Gemini also failed");
+    }
+  }
+
+  if (!content) {
+    res.status(502).json({ error: "Both AI providers failed. Please try again shortly." });
+    return;
+  }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      logger.error({ status: response.status, err }, "OpenAI API error");
-      res.status(502).json({ error: "AI service returned an error. Please try again." });
-      return;
-    }
-
-    const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      res.status(502).json({ error: "AI returned an empty response" });
-      return;
-    }
-
-    let questions: any[];
-    try {
-      const parsed = JSON.parse(content);
-      questions = Array.isArray(parsed) ? parsed : (parsed.questions ?? Object.values(parsed)[0]);
-      if (!Array.isArray(questions)) throw new Error("Not an array");
-    } catch {
-      res.status(502).json({ error: "AI returned malformed data. Please try again." });
-      return;
-    }
-
-    const validated = questions.slice(0, count).map((q: any) => ({
-      questionText: String(q.questionText ?? ""),
-      optionA: String(q.optionA ?? ""),
-      optionB: String(q.optionB ?? ""),
-      optionC: String(q.optionC ?? ""),
-      optionD: String(q.optionD ?? ""),
-      correctOption: ["A", "B", "C", "D"].includes(q.correctOption) ? q.correctOption : "A",
-    })).filter(q => q.questionText && q.optionA && q.optionB && q.optionC && q.optionD);
-
-    res.json({ questions: validated });
+    const questions = parseQuestions(content, count);
+    logger.info({ usedProvider, count: questions.length }, "AI questions generated");
+    res.json({ questions });
   } catch (err) {
-    logger.error({ err }, "AI question generation failed");
-    res.status(500).json({ error: "Failed to generate questions. Please try again." });
+    logger.error({ err, usedProvider }, "Failed to parse AI response");
+    res.status(502).json({ error: "AI returned malformed data. Please try again." });
   }
 });
 
