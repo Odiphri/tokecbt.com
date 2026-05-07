@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Redirect } from "wouter";
+import { useSchoolSettings } from "@/lib/use-school-settings";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -30,6 +31,7 @@ export default function Login() {
   const [role, setRole] = useState<"student" | "staff">("student");
   const loginMutation = useLogin();
   const { toast } = useToast();
+  const { schoolName, portalTagline, schoolLogo } = useSchoolSettings();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -72,12 +74,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-pink-50 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-pink-200 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center justify-center space-y-2 text-primary">
-          <BookOpen className="h-12 w-12" />
-          <h1 className="text-3xl font-bold tracking-tight">TOKE SCHOOLS</h1>
-          <p className="text-muted-foreground font-medium">Computer Based Testing Portal</p>
+          {schoolLogo ? (
+            <img src={schoolLogo} alt={schoolName} className="h-16 w-16 object-contain" />
+          ) : (
+            <BookOpen className="h-12 w-12" />
+          )}
+          <h1 className="text-3xl font-bold tracking-tight">{schoolName.toUpperCase()}</h1>
+          <p className="text-muted-foreground font-medium">{portalTagline}</p>
         </div>
 
         <Card className="border-t-4 border-t-primary shadow-lg">

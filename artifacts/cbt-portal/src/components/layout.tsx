@@ -36,6 +36,26 @@ import {
   GalleryHorizontalEnd,
   UserCircle,
 } from "lucide-react";
+import { useSchoolSettings } from "@/lib/use-school-settings";
+
+function SidebarBrand({ portalLabel }: { portalLabel: React.ReactNode }) {
+  const { schoolName, schoolLogo } = useSchoolSettings();
+  return (
+    <SidebarHeader className="border-b bg-primary text-primary-foreground p-4">
+      <div className="flex items-center gap-2 font-bold text-lg">
+        {schoolLogo ? (
+          <img src={schoolLogo} alt={schoolName} className="h-6 w-6 object-contain rounded" />
+        ) : (
+          <BookOpen className="h-6 w-6" />
+        )}
+        <span>{schoolName.toUpperCase()}</span>
+      </div>
+      <div className="mt-4 text-sm font-medium opacity-90 flex items-center gap-1">
+        {portalLabel}
+      </div>
+    </SidebarHeader>
+  );
+}
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -51,13 +71,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
         <Sidebar>
-          <SidebarHeader className="border-b bg-primary text-primary-foreground p-4">
-            <div className="flex items-center gap-2 font-bold text-lg">
-              <BookOpen className="h-6 w-6" />
-              <span>TOKE SCHOOLS</span>
-            </div>
-            <div className="mt-4 text-sm font-medium opacity-90">Student Portal</div>
-          </SidebarHeader>
+          <SidebarBrand portalLabel="Student Portal" />
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Menu</SidebarGroupLabel>
@@ -184,13 +198,7 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
         <Sidebar>
-          <SidebarHeader className="border-b bg-primary text-primary-foreground p-4">
-            <div className="flex items-center gap-2 font-bold text-lg">
-              <BookOpen className="h-6 w-6" />
-              <span>TOKE SCHOOLS</span>
-            </div>
-            <div className="mt-4 text-sm font-medium opacity-90">Staff Portal</div>
-          </SidebarHeader>
+          <SidebarBrand portalLabel="Staff Portal" />
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Menu</SidebarGroupLabel>
@@ -313,16 +321,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
         <Sidebar>
-          <SidebarHeader className="border-b bg-primary text-primary-foreground p-4">
-            <div className="flex items-center gap-2 font-bold text-lg">
-              <BookOpen className="h-6 w-6" />
-              <span>TOKE SCHOOLS</span>
-            </div>
-            <div className="mt-4 text-sm font-medium opacity-90 flex items-center gap-1">
-              <Shield className="h-3.5 w-3.5" />
-              Admin Portal
-            </div>
-          </SidebarHeader>
+          <SidebarBrand portalLabel={<><Shield className="h-3.5 w-3.5" /> Admin Portal</>} />
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Management</SidebarGroupLabel>
