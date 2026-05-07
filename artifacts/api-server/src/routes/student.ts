@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, studentsTable, examsTable, questionsTable, resultsTable, requestsTable, paymentsTable, overridesTable } from "@workspace/db";
+import { db, studentsTable, examsTable, questionsTable, resultsTable, requestsTable, paymentsTable, overridesTable, studentFeeRecordsTable, feeTypesTable } from "@workspace/db";
 import { eq, and, sql, or, isNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { SubmitExamBody, GetStudentExamParams, SubmitExamParams } from "@workspace/api-zod";
@@ -31,13 +31,14 @@ router.get("/student/exams", async (req, res): Promise<void> => {
       durationMinutes: examsTable.durationMinutes,
       startTime: examsTable.startTime,
       endTime: examsTable.endTime,
+      isLive: examsTable.isLive,
       createdBy: examsTable.createdBy,
       questionCount: sql<number>`cast(count(${questionsTable.id}) as int)`,
       resultsEnabled: examsTable.resultsEnabled,
     })
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
-    .where(eq(examsTable.class, student.class))
+    .where(and(eq(examsTable.class, student.class), eq(examsTable.isLive, true)))
     .groupBy(examsTable.id);
 
   const submittedExamIds = new Set(
@@ -47,12 +48,28 @@ router.get("/student/exams", async (req, res): Promise<void> => {
       .map(r => r.examId)
   );
 
-  // Payment status for this student
-  const [payment] = await db.select().from(paymentsTable).where(eq(paymentsTable.studentReg, user.id));
-  const isPaid = payment?.status === "paid";
+  // Payment blocking: check both legacy table and new fee records
+  const now = new Date();
+  const [legacyPayment] = await db.select().from(paymentsTable).where(eq(paymentsTable.studentReg, user.id));
+  const legacyPaid = legacyPayment?.status === "paid";
+
+  // Check mandatory fees in new fee records system
+  const mandatoryFeeTypes = await db.select().from(feeTypesTable).where(eq(feeTypesTable.isMandatory, true));
+  const mandatoryFeeIds = new Set(mandatoryFeeTypes.map(f => f.id));
+  let newSystemBlocked = false;
+  if (mandatoryFeeIds.size > 0) {
+    const mandatoryRecords = await db.select().from(studentFeeRecordsTable)
+      .where(eq(studentFeeRecordsTable.studentReg, user.id));
+    const mandatoryStudentRecords = mandatoryRecords.filter(r => mandatoryFeeIds.has(r.feeTypeId));
+    if (mandatoryStudentRecords.length > 0) {
+      newSystemBlocked = mandatoryStudentRecords.some(r => r.status !== "paid" && r.status !== "waived");
+    }
+  }
+
+  // Student is blocked only if both legacy AND new system say unpaid
+  const isPaid = legacyPaid || !newSystemBlocked;
 
   // Check for any active override
-  const now = new Date();
   let hasGlobalOverride = false;
   if (!isPaid) {
     const overrides = await db.select().from(overridesTable).where(eq(overridesTable.studentReg, user.id));
@@ -70,7 +87,7 @@ router.get("/student/exams", async (req, res): Promise<void> => {
     alreadySubmitted: submittedExamIds.has(e.id),
     resultsEnabled: e.resultsEnabled,
     paymentBlocked: !isPaid && !hasGlobalOverride,
-    paymentStatus: payment?.status ?? "unpaid",
+    paymentStatus: legacyPayment?.status ?? "unpaid",
   }));
 
   res.json(examsWithStatus);

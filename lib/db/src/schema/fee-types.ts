@@ -7,6 +7,7 @@ export const feeTypesTable = pgTable("fee_types", {
   amount: integer("amount").notNull().default(0),
   isMandatory: boolean("is_mandatory").notNull().default(true),
   academicYear: text("academic_year").notNull().default(""),
+  targetClass: text("target_class"),
   createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -2,28 +2,44 @@ import { Router, type IRouter } from "express";
 import { db, examsTable, questionsTable, resultsTable, studentsTable, teachersTable } from "@workspace/db";
 import { eq, and, sql, avg, desc } from "drizzle-orm";
 
-const CLASS_LEVELS = ["JSS1", "JSS2", "JSS3", "SS1", "SS2", "SS3"] as const;
+const JSS_LEVELS = ["JSS1", "JSS2", "JSS3"] as const;
+const SS_LEVELS = ["SS1", "SS2", "SS3"] as const;
 
 function parseClass(cls: string): { level: string; section: string } | null {
-  const m = cls.match(/^(JSS[123]|SS[123])([ABC])$/);
-  if (!m) return null;
-  return { level: m[1], section: m[2] };
+  // JSS format: "JSS1A", "JSS1B"
+  const jssMatch = cls.match(/^(JSS[123])([AB])$/);
+  if (jssMatch) return { level: jssMatch[1], section: jssMatch[2] };
+  // SS format: "SS1 Science", "SS1 Art", "SS1 Commercial"
+  const ssMatch = cls.match(/^(SS[123]) (Science|Art|Commercial)$/);
+  if (ssMatch) return { level: ssMatch[1], section: ssMatch[2] };
+  return null;
 }
 
 function promoteClass(cls: string): string | null {
   const parts = parseClass(cls);
   if (!parts) return null;
-  const idx = CLASS_LEVELS.indexOf(parts.level as typeof CLASS_LEVELS[number]);
-  if (idx === -1 || idx === CLASS_LEVELS.length - 1) return null;
-  return `${CLASS_LEVELS[idx + 1]}${parts.section}`;
+  const { level, section } = parts;
+  // JSS promotion: JSS1→JSS2, JSS2→JSS3. JSS3 cannot auto-promote to SS (stream must be assigned manually)
+  const jssIdx = JSS_LEVELS.indexOf(level as typeof JSS_LEVELS[number]);
+  if (jssIdx !== -1) {
+    if (jssIdx < JSS_LEVELS.length - 1) return `${JSS_LEVELS[jssIdx + 1]}${section}`;
+    return null; // JSS3 → SS requires manual stream assignment
+  }
+  // SS promotion: keep stream
+  const ssIdx = SS_LEVELS.indexOf(level as typeof SS_LEVELS[number]);
+  if (ssIdx !== -1 && ssIdx < SS_LEVELS.length - 1) return `${SS_LEVELS[ssIdx + 1]} ${section}`;
+  return null;
 }
 
 function demoteClass(cls: string): string | null {
   const parts = parseClass(cls);
   if (!parts) return null;
-  const idx = CLASS_LEVELS.indexOf(parts.level as typeof CLASS_LEVELS[number]);
-  if (idx <= 0) return null;
-  return `${CLASS_LEVELS[idx - 1]}${parts.section}`;
+  const { level, section } = parts;
+  const jssIdx = JSS_LEVELS.indexOf(level as typeof JSS_LEVELS[number]);
+  if (jssIdx > 0) return `${JSS_LEVELS[jssIdx - 1]}${section}`;
+  const ssIdx = SS_LEVELS.indexOf(level as typeof SS_LEVELS[number]);
+  if (ssIdx > 0) return `${SS_LEVELS[ssIdx - 1]} ${section}`;
+  return null;
 }
 
 import { requireAuth, requireRole } from "../middlewares/auth";
@@ -66,12 +82,9 @@ function canResetStudentExam(user: Express.Request["user"]): boolean {
 
 // ─── Student management routes ────────────────────────────────────────────────
 
+// All staff can view students (read-only); editing requires manage_students or class teacher role
 router.get("/teacher/students", async (req, res): Promise<void> => {
-  if (!canManageStudents(req.user)) {
-    res.status(403).json({ error: "manage_students permission required" });
-    return;
-  }
-  const students = await db.select().from(studentsTable);
+  const students = await db.select().from(studentsTable).orderBy(studentsTable.name);
   res.json(
     students.map(s => ({
       regNumber: s.regNumber,
@@ -533,6 +546,34 @@ router.delete("/teacher/exams/:examId", async (req, res): Promise<void> => {
   res.json({ success: true, message: "Exam deleted" });
 });
 
+router.patch("/teacher/exams/:examId/toggle-live", async (req, res): Promise<void> => {
+  const user = req.user!;
+  const viewAll = canViewAll(user);
+  const examId = parseInt(req.params.examId, 10);
+  if (isNaN(examId)) { res.status(400).json({ error: "Invalid exam ID" }); return; }
+
+  if (!canManageExams(user) && !viewAll) {
+    res.status(403).json({ error: "You do not have permission to modify this exam" });
+    return;
+  }
+
+  const { live } = req.body as { live: unknown };
+  if (typeof live !== "boolean") {
+    res.status(400).json({ error: "live must be a boolean" });
+    return;
+  }
+
+  const condition = viewAll
+    ? eq(examsTable.id, examId)
+    : and(eq(examsTable.id, examId), eq(examsTable.createdBy, user.id));
+
+  const [existing] = await db.select().from(examsTable).where(condition);
+  if (!existing) { res.status(404).json({ error: "Exam not found" }); return; }
+
+  await db.update(examsTable).set({ isLive: live }).where(eq(examsTable.id, examId));
+  res.json({ success: true, message: live ? "Exam is now live for students" : "Exam taken offline" });
+});
+
 router.patch("/teacher/exams/:examId/toggle-results", async (req, res): Promise<void> => {
   const user = req.user!;
   const viewAll = canViewAll(user);
@@ -812,6 +853,66 @@ router.get("/teacher/exams/:examId/results", async (req, res): Promise<void> => 
       submittedAt: r.submittedAt.toISOString(),
     };
   }));
+});
+
+// ─── My Profile (self-edit) ───────────────────────────────────────────────────
+
+router.put("/teacher/my-profile", async (req, res): Promise<void> => {
+  const user = req.user!;
+  if (user.role !== "staff") {
+    res.status(403).json({ error: "Only staff can update their own profile" });
+    return;
+  }
+  const { name, newStaffId, currentPassword, newPassword } = req.body as Record<string, string>;
+
+  const [teacher] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, user.id));
+  if (!teacher) { res.status(404).json({ error: "Teacher not found" }); return; }
+
+  const bcrypt = await import("bcryptjs");
+
+  // If changing password, verify current password first
+  if (newPassword) {
+    if (!currentPassword) {
+      res.status(400).json({ error: "Current password required to set a new password" });
+      return;
+    }
+    const valid = await bcrypt.compare(currentPassword, teacher.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: "New password must be at least 6 characters" });
+      return;
+    }
+  }
+
+  // If changing staffId, ensure it's not already taken
+  const targetId = newStaffId?.trim() || user.id;
+  if (targetId !== user.id) {
+    const [existing] = await db.select().from(teachersTable).where(eq(teachersTable.teacherId, targetId));
+    if (existing) {
+      res.status(409).json({ error: "Staff ID is already in use" });
+      return;
+    }
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (name?.trim()) updates.name = name.trim();
+  if (newPassword) updates.passwordHash = await bcrypt.hash(newPassword, 10);
+
+  if (Object.keys(updates).length > 0) {
+    await db.update(teachersTable).set(updates).where(eq(teachersTable.teacherId, user.id));
+  }
+
+  // Staff ID change requires updating primary key — do last
+  if (targetId !== user.id) {
+    await db.update(teachersTable).set({ teacherId: targetId }).where(eq(teachersTable.teacherId, user.id));
+    res.json({ success: true, staffIdChanged: true, newStaffId: targetId });
+    return;
+  }
+
+  res.json({ success: true, staffIdChanged: false });
 });
 
 export default router;
