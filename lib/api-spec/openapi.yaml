@@ -1127,7 +1127,13 @@ components:
           type: boolean
         manage_student_roles:
           type: boolean
-      required: [manage_exams, view_all_exams, view_all_results, manage_students, reset_student_exam, manage_student_roles]
+        manage_bursary:
+          type: boolean
+        mark_attendance:
+          type: boolean
+        override_exam_access:
+          type: boolean
+      required: [manage_exams, view_all_exams, view_all_results, manage_students, reset_student_exam, manage_student_roles, manage_bursary, mark_attendance, override_exam_access]
 
     RoleRecord:
       type: object

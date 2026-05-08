@@ -252,6 +252,16 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                  {user.permissions?.manage_bursary && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location.startsWith("/teacher/bursary")}>
+                        <Link href="/teacher/bursary">
+                          <DollarSign />
+                          <span>Bursary</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/teacher/profile"}>
                       <Link href="/teacher/profile">

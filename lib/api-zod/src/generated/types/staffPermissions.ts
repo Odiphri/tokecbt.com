@@ -13,4 +13,7 @@ export interface StaffPermissions {
   manage_students: boolean;
   reset_student_exam: boolean;
   manage_student_roles: boolean;
+  manage_bursary: boolean;
+  mark_attendance: boolean;
+  override_exam_access: boolean;
 }
