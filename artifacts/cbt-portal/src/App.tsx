@@ -26,6 +26,7 @@ import ExamResults from "@/pages/teacher/exam-results";
 import StaffStudents from "@/pages/teacher/students";
 import TeacherClass from "@/pages/teacher/class";
 import AttendancePage from "@/pages/teacher/attendance";
+import StaffBursaryPage from "@/pages/admin/bursary";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
 import AdminStaff from "@/pages/admin/staff";
@@ -65,6 +66,7 @@ function Router() {
       <ProtectedRoute path="/teacher/students" role="staff" component={StaffStudents} />
       <ProtectedRoute path="/teacher/class" role="staff" component={TeacherClass} />
       <ProtectedRoute path="/teacher/attendance" role="staff" component={AttendancePage} />
+      <ProtectedRoute path="/teacher/bursary" role="staff" component={StaffBursaryPage} />
       <ProtectedRoute path="/teacher/profile" role="staff" component={TeacherProfile} />
 
       {/* Admin Routes */}
