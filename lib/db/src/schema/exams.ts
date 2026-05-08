@@ -10,6 +10,7 @@ export const examsTable = pgTable("exams", {
   startTime: timestamp("start_time", { withTimezone: true }),
   endTime: timestamp("end_time", { withTimezone: true }),
   isLive: boolean("is_live").notNull().default(false),
+  shuffleQuestions: boolean("shuffle_questions").notNull().default(false),
   createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   resultsEnabled: boolean("results_enabled").notNull().default(true),

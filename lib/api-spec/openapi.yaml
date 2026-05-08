@@ -1469,6 +1469,8 @@ components:
         resultsEnabled:
           type: boolean
           nullable: true
+        shuffleQuestions:
+          type: boolean
       required: [id, subject, class, durationMinutes, createdBy, questionCount]
 
     ExamWithStats:
@@ -1498,6 +1500,8 @@ components:
           type: number
           nullable: true
         resultsEnabled:
+          type: boolean
+        shuffleQuestions:
           type: boolean
       required: [id, subject, class, durationMinutes, createdBy, questionCount, attemptCount, resultsEnabled]
 
@@ -1545,6 +1549,8 @@ components:
         resultsEnabled:
           type: boolean
           nullable: true
+        shuffleQuestions:
+          type: boolean
         questions:
           type: array
           items:
@@ -1566,6 +1572,8 @@ components:
         endTime:
           type: string
           nullable: true
+        shuffleQuestions:
+          type: boolean
       required: [subject, class, durationMinutes]
 
     CreateQuestionBody:

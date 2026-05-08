@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings, Sparkles, Radio, WifiOff } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Edit, Trash2, Settings, Sparkles, Radio, WifiOff, Shuffle } from "lucide-react";
 import QuestionForm from "./question-form";
 import {
   AlertDialog,
@@ -219,6 +219,16 @@ export default function ExamDetail() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-primary">{exam.subject}</h1>
             <p className="text-muted-foreground mt-1">Class: {exam.class} | Duration: {exam.durationMinutes} mins</p>
+            <div className="flex gap-2 mt-2">
+              {(exam as any).isLive && (
+                <Badge className="bg-green-100 text-green-700 border-green-300 border">Live</Badge>
+              )}
+              {(exam as any).shuffleQuestions && (
+                <Badge className="bg-blue-100 text-blue-700 border-blue-300 border flex items-center gap-1">
+                  <Shuffle className="h-3 w-3" /> Shuffle On
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">

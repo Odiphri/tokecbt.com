@@ -174,8 +174,10 @@ router.get("/student/exams/:examId", async (req, res): Promise<void> => {
     .from(questionsTable)
     .where(eq(questionsTable.examId, exam.id));
 
-  // Shuffle questions for randomization
-  const shuffled = [...questions].sort(() => Math.random() - 0.5);
+  // Shuffle questions only if the exam has shuffle enabled
+  const shuffled = exam.shuffleQuestions
+    ? [...questions].sort(() => Math.random() - 0.5)
+    : questions;
 
   const safeQuestions = shuffled.map(q => ({
     id: q.id,

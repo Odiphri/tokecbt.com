@@ -128,6 +128,7 @@ export const GetStudentExamsResponseItem = zod.object({
   questionCount: zod.number(),
   alreadySubmitted: zod.boolean().nullish(),
   resultsEnabled: zod.boolean().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 export const GetStudentExamsResponse = zod.array(GetStudentExamsResponseItem);
 
@@ -147,6 +148,7 @@ export const GetStudentExamResponse = zod.object({
   endTime: zod.string().nullish(),
   createdBy: zod.string(),
   resultsEnabled: zod.boolean().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
   questions: zod.array(
     zod.object({
       id: zod.number(),
@@ -349,6 +351,7 @@ export const GetTeacherExamsResponseItem = zod.object({
   attemptCount: zod.number(),
   averageScore: zod.number().nullish(),
   resultsEnabled: zod.boolean(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 export const GetTeacherExamsResponse = zod.array(GetTeacherExamsResponseItem);
 
@@ -361,6 +364,7 @@ export const CreateExamBody = zod.object({
   durationMinutes: zod.number(),
   startTime: zod.string().nullish(),
   endTime: zod.string().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 
 /**
@@ -395,6 +399,7 @@ export const GetTeacherExamResponse = zod.object({
   endTime: zod.string().nullish(),
   createdBy: zod.string(),
   resultsEnabled: zod.boolean().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
   questions: zod.array(
     zod.object({
       id: zod.number(),
@@ -422,6 +427,7 @@ export const UpdateExamBody = zod.object({
   durationMinutes: zod.number(),
   startTime: zod.string().nullish(),
   endTime: zod.string().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 
 export const UpdateExamResponse = zod.object({
@@ -435,6 +441,7 @@ export const UpdateExamResponse = zod.object({
   questionCount: zod.number(),
   alreadySubmitted: zod.boolean().nullish(),
   resultsEnabled: zod.boolean().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 
 /**
@@ -951,6 +958,7 @@ export const GetAdminExamsResponseItem = zod.object({
   attemptCount: zod.number(),
   averageScore: zod.number().nullish(),
   resultsEnabled: zod.boolean(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 export const GetAdminExamsResponse = zod.array(GetAdminExamsResponseItem);
 
@@ -967,6 +975,7 @@ export const UpdateAdminExamBody = zod.object({
   durationMinutes: zod.number(),
   startTime: zod.string().nullish(),
   endTime: zod.string().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 
 export const UpdateAdminExamResponse = zod.object({
@@ -980,6 +989,7 @@ export const UpdateAdminExamResponse = zod.object({
   questionCount: zod.number(),
   alreadySubmitted: zod.boolean().nullish(),
   resultsEnabled: zod.boolean().nullish(),
+  shuffleQuestions: zod.boolean().optional(),
 });
 
 /**

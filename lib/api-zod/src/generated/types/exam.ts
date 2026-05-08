@@ -17,4 +17,5 @@ export interface Exam {
   questionCount: number;
   alreadySubmitted?: boolean | null;
   resultsEnabled?: boolean | null;
+  shuffleQuestions?: boolean;
 }

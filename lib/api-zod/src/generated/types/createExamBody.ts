@@ -12,4 +12,5 @@ export interface CreateExamBody {
   durationMinutes: number;
   startTime?: string | null;
   endTime?: string | null;
+  shuffleQuestions?: boolean;
 }
