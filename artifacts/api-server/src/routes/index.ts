@@ -17,12 +17,12 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(studentRouter);
 router.use(teacherRouter);
+router.use(bursaryRouter);
+router.use(teacherSubjectsRouter);
 router.use(adminRouter);
 router.use(attendanceRouter);
-router.use(bursaryRouter);
 router.use(directoryRouter);
 router.use(aiQuestionsRouter);
 router.use(schoolSettingsRouter);
-router.use(teacherSubjectsRouter);
 
 export default router;
