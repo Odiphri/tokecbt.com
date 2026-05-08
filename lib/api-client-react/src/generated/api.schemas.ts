@@ -264,6 +264,7 @@ export interface Exam {
   questionCount: number;
   alreadySubmitted?: boolean | null;
   resultsEnabled?: boolean | null;
+  shuffleQuestions?: boolean;
 }
 
 export interface ExamWithStats {
@@ -278,6 +279,7 @@ export interface ExamWithStats {
   attemptCount: number;
   averageScore?: number | null;
   resultsEnabled: boolean;
+  shuffleQuestions?: boolean;
 }
 
 export type QuestionCorrectOption =
@@ -310,6 +312,7 @@ export interface ExamWithQuestions {
   endTime?: string | null;
   createdBy: string;
   resultsEnabled?: boolean | null;
+  shuffleQuestions?: boolean;
   questions: Question[];
 }
 
@@ -319,6 +322,7 @@ export interface CreateExamBody {
   durationMinutes: number;
   startTime?: string | null;
   endTime?: string | null;
+  shuffleQuestions?: boolean;
 }
 
 export type CreateQuestionBodyCorrectOption =

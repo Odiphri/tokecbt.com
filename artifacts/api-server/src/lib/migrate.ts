@@ -179,6 +179,7 @@ export async function runMigrations(): Promise<void> {
 
       -- Column additions for new features (idempotent)
       ALTER TABLE exams ADD COLUMN IF NOT EXISTS is_live BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE exams ADD COLUMN IF NOT EXISTS shuffle_questions BOOLEAN NOT NULL DEFAULT FALSE;
       ALTER TABLE fee_types ADD COLUMN IF NOT EXISTS target_class TEXT;
 
       INSERT INTO school_settings (key, value)

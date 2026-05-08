@@ -18,4 +18,5 @@ export interface ExamWithStats {
   attemptCount: number;
   averageScore?: number | null;
   resultsEnabled: boolean;
+  shuffleQuestions?: boolean;
 }

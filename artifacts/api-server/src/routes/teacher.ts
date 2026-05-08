@@ -354,6 +354,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
       attemptCount: sql<number>`cast(count(distinct ${resultsTable.id}) as int)`,
       averageScore: sql<number | null>`avg(cast(${resultsTable.score} as float) / nullif(${resultsTable.total}, 0) * 100)`,
       resultsEnabled: examsTable.resultsEnabled,
+      shuffleQuestions: examsTable.shuffleQuestions,
     })
     .from(examsTable)
     .leftJoin(questionsTable, eq(questionsTable.examId, examsTable.id))
@@ -368,6 +369,7 @@ router.get("/teacher/exams", async (req, res): Promise<void> => {
     endTime: e.endTime?.toISOString() ?? null,
     averageScore: e.averageScore != null ? Math.round(Number(e.averageScore) * 100) / 100 : null,
     resultsEnabled: e.resultsEnabled,
+    shuffleQuestions: e.shuffleQuestions,
   })));
 });
 
@@ -392,6 +394,7 @@ router.post("/teacher/exams", async (req, res): Promise<void> => {
       durationMinutes: parsed.data.durationMinutes,
       startTime: parsed.data.startTime ? new Date(parsed.data.startTime) : null,
       endTime: parsed.data.endTime ? new Date(parsed.data.endTime) : null,
+      shuffleQuestions: parsed.data.shuffleQuestions ?? false,
       createdBy: user.id,
     })
     .returning();
@@ -406,6 +409,7 @@ router.post("/teacher/exams", async (req, res): Promise<void> => {
     createdBy: exam.createdBy,
     questionCount: 0,
     resultsEnabled: exam.resultsEnabled,
+    shuffleQuestions: exam.shuffleQuestions,
   });
 });
 
@@ -446,6 +450,7 @@ router.get("/teacher/exams/:examId", async (req, res): Promise<void> => {
     endTime: exam.endTime?.toISOString() ?? null,
     createdBy: exam.createdBy,
     resultsEnabled: exam.resultsEnabled,
+    shuffleQuestions: exam.shuffleQuestions,
     questions,
   });
 });
@@ -492,6 +497,7 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
       durationMinutes: body.data.durationMinutes,
       startTime: body.data.startTime ? new Date(body.data.startTime) : null,
       endTime: body.data.endTime ? new Date(body.data.endTime) : null,
+      shuffleQuestions: body.data.shuffleQuestions ?? false,
     })
     .where(eq(examsTable.id, params.data.examId))
     .returning();
@@ -511,6 +517,7 @@ router.put("/teacher/exams/:examId", async (req, res): Promise<void> => {
     createdBy: exam.createdBy,
     questionCount: questionCount ?? 0,
     resultsEnabled: exam.resultsEnabled,
+    shuffleQuestions: exam.shuffleQuestions,
   });
 });
 

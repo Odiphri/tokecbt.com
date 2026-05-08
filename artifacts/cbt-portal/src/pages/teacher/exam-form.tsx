@@ -15,12 +15,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, ChevronsUpDown, Check } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronsUpDown, Check, Shuffle } from "lucide-react";
 import { Link } from "wouter";
 import { CLASS_SECTIONS } from "@/lib/class-sections";
 import { cn } from "@/lib/utils";
@@ -31,11 +32,11 @@ const schema = z.object({
   durationMinutes: z.coerce.number().min(1, "Duration must be at least 1 minute"),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
+  shuffleQuestions: z.boolean().default(false),
 });
 
 function toLocalDatetimeString(isoString?: string | null) {
   if (!isoString) return "";
-  // Convert ISO to local datetime-local input format
   const d = new Date(isoString);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -46,7 +47,7 @@ export default function ExamForm() {
   const isEdit = !!examId && examId !== "new";
   const id = isEdit ? parseInt(examId!, 10) : 0;
   const [classOpen, setClassOpen] = useState(false);
-  
+
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -66,6 +67,7 @@ export default function ExamForm() {
       durationMinutes: 60,
       startTime: "",
       endTime: "",
+      shuffleQuestions: false,
     },
   });
 
@@ -77,6 +79,7 @@ export default function ExamForm() {
         durationMinutes: exam.durationMinutes,
         startTime: toLocalDatetimeString(exam.startTime),
         endTime: toLocalDatetimeString(exam.endTime),
+        shuffleQuestions: exam.shuffleQuestions ?? false,
       });
     }
   }, [isEdit, exam, form]);
@@ -88,6 +91,7 @@ export default function ExamForm() {
       durationMinutes: values.durationMinutes,
       startTime: values.startTime ? new Date(values.startTime).toISOString() : null,
       endTime: values.endTime ? new Date(values.endTime).toISOString() : null,
+      shuffleQuestions: values.shuffleQuestions,
     };
 
     if (isEdit) {
@@ -123,8 +127,6 @@ export default function ExamForm() {
       </div>
     );
   }
-
-  const selectedClass = form.watch("class");
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -262,6 +264,30 @@ export default function ExamForm() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="shuffleQuestions"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4 bg-slate-50/60">
+                    <div className="space-y-0.5">
+                      <FormLabel className="flex items-center gap-2 text-base cursor-pointer">
+                        <Shuffle className="h-4 w-4 text-primary" />
+                        Shuffle Questions
+                      </FormLabel>
+                      <FormDescription>
+                        Each student will receive the questions in a different random order. Question numbers will differ per student.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               <div className="flex justify-end gap-4">
                 <Link href="/teacher/exams">
