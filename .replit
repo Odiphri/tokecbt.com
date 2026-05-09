@@ -11,6 +11,9 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[env]
+DATABASE_URL = "postgresql://postgres:GfGGroWUVuhJodisJPheajmlDtJbGYbd@postgres.railway.internal:5432/railway"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

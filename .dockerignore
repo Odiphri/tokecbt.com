@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.vscode
+.git
+.gitignore
+.railway
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+.idea
+yarn.lock
+package-lock.json
