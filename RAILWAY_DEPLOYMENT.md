@@ -12,9 +12,9 @@ Both services are configured with Dockerfiles in their respective directories.
 1. Go to [railway.app](https://railway.app) and log in
 2. Create a new project or select an existing one
 3. Add services:
-   - **PostgreSQL**: Click "Add Service" → "PostgreSQL"
    - **API Server**: Click "Add Service" → "GitHub Repo" or "Raw Repository", point to this repo
    - **CBT Portal**: Repeat for frontend
+   - **No PostgreSQL needed** - using existing Replit database
 
 ## Step 2: Environment Variables
 
@@ -22,13 +22,12 @@ Both services are configured with Dockerfiles in their respective directories.
 1. Go to api-server service → Variables
 2. Set the following:
    ```
-   DATABASE_URL=postgresql://postgres:[password]@[postgres-host]:5432/[database-name]
+   DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable
    JWT_SECRET=[generate with: openssl rand -base64 32]
    NODE_ENV=production
    PORT=8080
    ```
-3. Get DATABASE_URL from PostgreSQL service → Variables (it will show the connection string)
-4. For JWT_SECRET, generate: `openssl rand -base64 32` and paste the output
+3. **Important**: Ensure Railway can connect to the external Replit database host "helium"
 
 ### For cbt-portal service:
 1. Go to cbt-portal service → Variables
@@ -40,9 +39,8 @@ Both services are configured with Dockerfiles in their respective directories.
    ```
 
 ### For PostgreSQL:
-- Railway auto-generates a secure DATABASE_URL
-- Copy it to api-server variables
-- Optionally create initial database and users if needed
+- **Using external Replit database** - no Railway PostgreSQL service needed
+- DATABASE_URL is pre-configured to connect to existing data
 
 ## Step 3: Deploy
 
@@ -60,8 +58,10 @@ Both services are configured with Dockerfiles in their respective directories.
 After api-server deploys successfully:
 1. Go to api-server service
 2. Open "Terminal" tab (or use Railway CLI)
-3. Run: `pnpm run migrate` (if migration script exists in package.json)
-4. Or manually run database setup scripts
+3. **CAUTION**: Your existing Replit database data will be preserved
+4. Run: `pnpm run migrate` (if migration script exists in package.json)
+5. Or manually run database setup scripts
+6. **Important**: Check if migrations are safe for existing data - they should be additive only
 
 ## Step 5: Verification
 

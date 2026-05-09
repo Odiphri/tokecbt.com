@@ -18,23 +18,20 @@
 - Railway will detect the Dockerfiles automatically
 
 ### 2. Add PostgreSQL Database
-- In your Railway project, click "Add Service"
-- Select "Database" → "PostgreSQL"
-- Wait for PostgreSQL to provision
-- Click PostgreSQL service → "Variables" tab
-- Copy the `DATABASE_URL` value
+- **SKIP THIS STEP** - Using existing Replit database instead
+- DATABASE_URL is already configured in the code
 
 ### 3. Configure api-server Service
 - Click "api-server" service
 - Go to "Variables" tab
 - Add these variables:
   ```
-  DATABASE_URL=[PASTE from PostgreSQL step above]
+  DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable
   JWT_SECRET=[GENERATE: run `openssl rand -base64 32` and paste output]
   NODE_ENV=production
   PORT=8080
   ```
-- Save variables
+- **Note**: DATABASE_URL is pre-set to use your existing Replit database with all your data
 
 ### 4. Deploy api-server
 - Push this commit to GitHub (if using Git integration)
@@ -76,10 +73,11 @@
 - [railway.json](./railway.json) — Configuration template
 
 ## ⚠️ Important Notes
-- **Secrets**: JWT_SECRET and DATABASE_URL are sensitive—set them only in Railway dashboard, not in code
+- **Database**: Using your existing Replit database - all your data will be preserved
+- **Network Access**: Ensure Railway can connect to "helium" host (Replit database)
+- **Secrets**: JWT_SECRET is sensitive—generate securely
 - **API URL**: After api-server deploys, you MUST get its URL and update cbt-portal env vars
-- **Database**: Railway PostgreSQL auto-generates credentials—use the provided DATABASE_URL
-- **Domains**: You can add custom domains later in Railway settings
+- **SSL**: Database connection has sslmode=disable (may need adjustment for production)
 
 ## 🔗 Links
 - Railway Dashboard: https://railway.app
