@@ -17,31 +17,38 @@
 - Select this repository
 - Railway will detect the Dockerfiles automatically
 
-### 2. Configure api-server Service
+### 2. Add PostgreSQL Database
+- In your Railway project, click "Add Service"
+- Select "Database" → "PostgreSQL"
+- Wait for PostgreSQL to provision
+- Click PostgreSQL service → "Variables" tab
+- Copy the `DATABASE_URL` value
+
+### 3. Configure api-server Service
 - Click "api-server" service
 - Go to "Variables" tab
 - Add these variables:
   ```
-  DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable
+  DATABASE_URL=[PASTE from PostgreSQL step above]
   JWT_SECRET=[GENERATE: run `openssl rand -base64 32` and paste output]
   NODE_ENV=production
   PORT=8080
   ```
 - Save variables
 
-### 3. Deploy api-server
+### 4. Deploy api-server
 - Push this commit to GitHub (if using Git integration)
   - OR manually trigger deploy in Railway dashboard
 - Wait for deployment to complete (watch the Deployments tab)
 - Once deployed, note the public URL (e.g., `https://api-server-production.up.railway.app`)
 
-### 4. Configure cbt-portal Service
+### 5. Configure cbt-portal Service
 - Click "cbt-portal" service
 - Go to "Variables" tab
 - Add:
   ```
-  VITE_API_BASE_URL=[api-server-url from step 3]
-  PUBLIC_API_URL=[api-server-url from step 3]
+  VITE_API_BASE_URL=[api-server-url from step 4]
+  PUBLIC_API_URL=[api-server-url from step 4]
   ```
 - Example:
   ```
@@ -49,16 +56,16 @@
   PUBLIC_API_URL=https://api-server-production.up.railway.app
   ```
 
-### 5. Deploy cbt-portal
+### 6. Deploy cbt-portal
 - Push changes or trigger manual deploy
 - Wait for deployment to complete
 
-### 6. Run Database Migrations (if needed)
+### 7. Run Database Migrations (if needed)
 - In api-server service, open "Terminal"
 - Run: `pnpm --filter @workspace/api-server run migrate`
 - Or check if migrations run automatically on startup
 
-### 7. Test Deployment
+### 8. Test Deployment
 - Visit api-server URL: Check `/health` endpoint
 - Visit cbt-portal URL: Verify login page loads
 - Test authentication flow
