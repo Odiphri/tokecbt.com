@@ -59,8 +59,9 @@
 
 ### 7. Run Database Migrations (if needed)
 - In api-server service, open "Terminal"
-- Run: `pnpm --filter @workspace/api-server run migrate`
-- Or check if migrations run automatically on startup
+- Run: `pnpm --filter @workspace/api-server run migrate` (safe - creates tables if missing, preserves existing data)
+- Run: `pnpm --filter @workspace/api-server run seed-admin` (creates default admin: admin/Admin@1234)
+- **✅ Your existing Replit data is completely safe**
 
 ### 8. Test Deployment
 - Visit api-server URL: Check `/health` endpoint

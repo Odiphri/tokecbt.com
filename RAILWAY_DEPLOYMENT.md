@@ -58,10 +58,10 @@ Both services are configured with Dockerfiles in their respective directories.
 After api-server deploys successfully:
 1. Go to api-server service
 2. Open "Terminal" tab (or use Railway CLI)
-3. **CAUTION**: Your existing Replit database data will be preserved
-4. Run: `pnpm run migrate` (if migration script exists in package.json)
-5. Or manually run database setup scripts
-6. **Important**: Check if migrations are safe for existing data - they should be additive only
+3. **✅ SAFE FOR EXISTING DATA**: Migrations use `CREATE TABLE IF NOT EXISTS` - your Replit data is preserved
+4. Run: `pnpm run migrate` (creates tables if missing)
+5. Run: `pnpm run seed-admin` (creates/updates admin user safely)
+6. **Optional**: Run role seeding if needed: `pnpm run seed-roles`
 
 ## Step 5: Verification
 
