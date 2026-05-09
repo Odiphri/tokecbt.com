@@ -1,0 +1,30 @@
+{
+  "projectId": "YOUR_RAILWAY_PROJECT_ID",
+  "environment": "production",
+  "services": [
+    {
+      "id": "api-server",
+      "name": "api-server",
+      "path": "artifacts/api-server",
+      "dockerfile": "artifacts/api-server/Dockerfile",
+      "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build",
+      "startCommand": "node --enable-source-maps ./dist/index.mjs",
+      "env": {
+        "PORT": "8080",
+        "NODE_ENV": "production",
+        "DATABASE_URL": "postgresql://user:password@host/database",
+        "JWT_SECRET": "generate-secure-secret-here"
+      }
+    },
+    {
+      "id": "cbt-portal",
+      "name": "cbt-portal",
+      "path": "artifacts/cbt-portal",
+      "dockerfile": "artifacts/cbt-portal/Dockerfile",
+      "env": {
+        "VITE_API_BASE_URL": "https://api-server-production.up.railway.app",
+        "PUBLIC_API_URL": "https://api-server-production.up.railway.app"
+      }
+    }
+  ]
+}
