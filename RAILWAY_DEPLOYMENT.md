@@ -12,9 +12,10 @@ Both services are configured with Dockerfiles in their respective directories.
 1. Go to [railway.app](https://railway.app) and log in
 2. Create a new project or select an existing one
 3. Add services:
-   - **PostgreSQL**: Click "Add Service" → "PostgreSQL"
    - **API Server**: Click "Add Service" → "GitHub Repo" or "Raw Repository", point to this repo
    - **CBT Portal**: Repeat for frontend
+
+**Note**: Using existing Replit PostgreSQL database - no Railway database service needed.
 
 ## Step 2: Environment Variables
 
@@ -22,13 +23,12 @@ Both services are configured with Dockerfiles in their respective directories.
 1. Go to api-server service → Variables
 2. Set the following:
    ```
-   DATABASE_URL=postgresql://postgres:[password]@[postgres-host]:5432/[database-name]
+   DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable
    JWT_SECRET=[generate with: openssl rand -base64 32]
    NODE_ENV=production
    PORT=8080
    ```
-3. Get DATABASE_URL from PostgreSQL service → Variables (it will show the connection string)
-4. For JWT_SECRET, generate: `openssl rand -base64 32` and paste the output
+3. For JWT_SECRET, generate: `openssl rand -base64 32` and paste the output
 
 ### For cbt-portal service:
 1. Go to cbt-portal service → Variables
@@ -38,11 +38,6 @@ Both services are configured with Dockerfiles in their respective directories.
    VITE_API_BASE_URL=https://[api-server-url].up.railway.app
    PUBLIC_API_URL=https://[api-server-url].up.railway.app
    ```
-
-### For PostgreSQL:
-- Railway auto-generates a secure DATABASE_URL
-- Copy it to api-server variables
-- Optionally create initial database and users if needed
 
 ## Step 3: Deploy
 
