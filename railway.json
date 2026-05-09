@@ -6,7 +6,7 @@
       "id": "api-server",
       "name": "api-server",
       "path": "artifacts/api-server",
-      "dockerfile": "artifacts/api-server/Dockerfile",
+      "dockerfile": "Dockerfile",
       "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build",
       "startCommand": "node --enable-source-maps ./dist/index.mjs",
       "env": {
@@ -20,7 +20,7 @@
       "id": "cbt-portal",
       "name": "cbt-portal",
       "path": "artifacts/cbt-portal",
-      "dockerfile": "artifacts/cbt-portal/Dockerfile",
+      "dockerfile": "Dockerfile",
       "env": {
         "VITE_API_BASE_URL": "https://api-server-production.up.railway.app",
         "PUBLIC_API_URL": "https://api-server-production.up.railway.app"
